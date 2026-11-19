@@ -16,29 +16,28 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm no-print">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="#" onclick="showPage('opac')">📚 Otomasi Perpustakaan</a>
+    <a class="navbar-brand fw-bold" href="#" onclick="showPage('opac'); return false;">📚 Otomasi Perpustakaan</a>
     <div class="d-flex flex-wrap gap-2 align-items-center" id="navMenu">
-      <button class="btn btn-outline-light btn-sm" onclick="showPage('opac')">OPAC</button>
+      <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('opac')">OPAC</button>
 
       <!-- Menu Khusus Pemustaka -->
       <span id="pemustakaNav" class="d-none">
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('bacaan')">Daftar Bacaan (<span id="badgeBacaan">0</span>)</button>
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('pinjamanSaya')">Pinjaman Saya</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('bacaan')">Daftar Bacaan (<span id="badgeBacaan">0</span>)</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('pinjamanSaya')">Pinjaman Saya</button>
       </span>
 
       <!-- Menu Khusus Pustakawan -->
       <span id="pustakawanNav" class="d-none">
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('dashboard')">Dashboard</button>
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('bibliografi')">Bibliografi</button>
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('anggota')">Keanggotaan</button>
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('sirkulasi')">Sirkulasi</button>
-        <button class="btn btn-outline-light btn-sm" onclick="showPage('akun')">Akun & Password</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('dashboard')">Dashboard</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('bibliografi')">Bibliografi</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('anggota')">Keanggotaan</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('sirkulasi')">Sirkulasi</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('akun')">Akun & Password</button>
       </span>
 
-      <!-- Info user & Logout -->
       <span id="userBadge" class="badge bg-info text-dark d-none"></span>
-      <button class="btn btn-warning btn-sm fw-bold d-none" id="btnLogout" onclick="logout()">Logout</button>
-      <button class="btn btn-light btn-sm fw-bold" id="btnLoginNav" onclick="showPage('login')">Login / Daftar</button>
+      <button type="button" class="btn btn-warning btn-sm fw-bold d-none" id="btnLogout" onclick="logout()">Logout</button>
+      <button type="button" class="btn btn-light btn-sm fw-bold" id="btnLoginNav" onclick="showPage('login')">Login / Daftar</button>
     </div>
   </div>
 </nav>
@@ -66,7 +65,7 @@
             <input type="text" id="opacKeyword" class="form-control" placeholder="Ketik kata kunci pencarian..." oninput="renderOPAC()">
           </div>
           <div class="col-md-2 d-grid">
-            <button class="btn btn-primary" onclick="renderOPAC()">Cari</button>
+            <button type="button" class="btn btn-primary" onclick="renderOPAC()">Cari</button>
           </div>
         </div>
       </div>
@@ -74,9 +73,9 @@
 
     <div class="card shadow-sm border-0">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <h6 class="text-muted mb-0" id="opacCount"></h6>
-          <small class="text-muted no-print">Login sebagai Pemustaka untuk menyimpan daftar bacaan / meminjam</small>
+          <button type="button" class="btn btn-outline-secondary btn-sm no-print" onclick="resetDemoData(true)">🔄 Pulihkan Data Buku Awal</button>
         </div>
         <div class="table-responsive">
           <table class="table table-hover align-middle">
@@ -117,8 +116,8 @@
               <button type="submit" class="btn btn-primary w-100">Masuk</button>
             </form>
             <div class="alert alert-secondary mt-3 mb-0 small">
-              <strong>Akun Pustakawan:</strong> <code>pustakawan</code> / <code>pustakawan123</code> (atau <code>admin</code> / <code>admin123</code>)<br>
-              <strong>Akun Pemustaka:</strong> <code>pemustaka</code> / <code>pemustaka123</code>
+              <strong>Pustakawan:</strong> <code>pustakawan</code> / <code>pustakawan123</code> atau <code>admin</code> / <code>admin123</code><br>
+              <strong>Pemustaka:</strong> <code>pemustaka</code> / <code>pemustaka123</code>
             </div>
           </div>
         </div>
@@ -146,7 +145,7 @@
                 <input type="text" id="regUser" class="form-control" required>
               </div>
               <div class="mb-3">
-                <label class="form-label small">Password</label>
+                <label class="form-label small">Password (min. 4 karakter)</label>
                 <input type="password" id="regPass" class="form-control" required minlength="4">
               </div>
               <button type="submit" class="btn btn-success w-100">Daftar Sebagai Pemustaka</button>
@@ -231,7 +230,7 @@
       </div>
     </div>
     <div class="mt-4">
-      <button class="btn btn-outline-danger btn-sm" onclick="resetDemoData()">🔄 Reset Data Contoh ke Awal</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" onclick="resetDemoData(false)">🔄 Reset Semua Data Contoh ke Awal</button>
     </div>
   </section>
 
@@ -240,8 +239,8 @@
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
       <h4 class="fw-bold mb-0">Manajemen Bibliografi</h4>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Cetak Katalog & Barcode</button>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBuku" onclick="bukaFormBuku()">+ Tambah Buku</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Cetak Katalog & Barcode</button>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBuku" onclick="bukaFormBuku()">+ Tambah Buku</button>
       </div>
     </div>
     <div class="card border-0 shadow-sm">
@@ -268,7 +267,7 @@
   <section id="page-anggota" class="d-none">
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
       <h4 class="fw-bold mb-0">Manajemen Keanggotaan</h4>
-      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnggota" onclick="bukaFormAnggota()">+ Tambah Anggota</button>
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnggota" onclick="bukaFormAnggota()">+ Tambah Anggota</button>
     </div>
     <div class="card border-0 shadow-sm">
       <div class="card-body table-responsive">
@@ -455,7 +454,7 @@
         <svg id="kartuBarcode"></svg>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary btn-sm w-100" onclick="cetakKartu()">🖨️ Cetak Kartu</button>
+        <button type="button" class="btn btn-primary btn-sm w-100" onclick="cetakKartu()">🖨️ Cetak Kartu</button>
       </div>
     </div>
   </div>
