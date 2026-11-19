@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Otomasi Perpustakaan (OPAC & Sirkulasi)</title>
+  <title>Sistem Otomasi Perpustakaan - Pemustaka & Pustakawan</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
@@ -18,16 +18,27 @@
   <div class="container">
     <a class="navbar-brand fw-bold" href="#" onclick="showPage('opac')">📚 Otomasi Perpustakaan</a>
     <div class="d-flex flex-wrap gap-2 align-items-center" id="navMenu">
-      <button class="btn btn-outline-light btn-sm" onclick="showPage('opac')">OPAC Publik</button>
-      <span id="adminNav" class="d-none">
+      <button class="btn btn-outline-light btn-sm" onclick="showPage('opac')">OPAC</button>
+
+      <!-- Menu Khusus Pemustaka -->
+      <span id="pemustakaNav" class="d-none">
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('bacaan')">Daftar Bacaan (<span id="badgeBacaan">0</span>)</button>
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('pinjamanSaya')">Pinjaman Saya</button>
+      </span>
+
+      <!-- Menu Khusus Pustakawan -->
+      <span id="pustakawanNav" class="d-none">
         <button class="btn btn-outline-light btn-sm" onclick="showPage('dashboard')">Dashboard</button>
         <button class="btn btn-outline-light btn-sm" onclick="showPage('bibliografi')">Bibliografi</button>
         <button class="btn btn-outline-light btn-sm" onclick="showPage('anggota')">Keanggotaan</button>
         <button class="btn btn-outline-light btn-sm" onclick="showPage('sirkulasi')">Sirkulasi</button>
         <button class="btn btn-outline-light btn-sm" onclick="showPage('akun')">Akun & Password</button>
-        <button class="btn btn-warning btn-sm fw-bold" onclick="logout()">Logout</button>
       </span>
-      <button class="btn btn-light btn-sm fw-bold" id="btnLoginNav" onclick="showPage('login')">Login Pustakawan</button>
+
+      <!-- Info user & Logout -->
+      <span id="userBadge" class="badge bg-info text-dark d-none"></span>
+      <button class="btn btn-warning btn-sm fw-bold d-none" id="btnLogout" onclick="logout()">Logout</button>
+      <button class="btn btn-light btn-sm fw-bold" id="btnLoginNav" onclick="showPage('login')">Login / Daftar</button>
     </div>
   </div>
 </nav>
@@ -35,7 +46,7 @@
 <div class="container my-4">
   <div id="alertBox"></div>
 
-  <!-- HALAMAN OPAC PUBLIK -->
+  <!-- HALAMAN OPAC -->
   <section id="page-opac">
     <div class="card shadow-sm border-0 mb-4 no-print">
       <div class="card-body p-4">
@@ -65,7 +76,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="text-muted mb-0" id="opacCount"></h6>
-          <small class="text-muted no-print">Data tersimpan di browser (LocalStorage)</small>
+          <small class="text-muted no-print">Login sebagai Pemustaka untuk menyimpan daftar bacaan / meminjam</small>
         </div>
         <div class="table-responsive">
           <table class="table table-hover align-middle">
@@ -77,6 +88,7 @@
                 <th>Penerbit (Tahun)</th>
                 <th>Kategori</th>
                 <th>Ketersediaan</th>
+                <th class="no-print">Aksi Pemustaka</th>
               </tr>
             </thead>
             <tbody id="opacBody"></tbody>
@@ -86,13 +98,13 @@
     </div>
   </section>
 
-  <!-- HALAMAN LOGIN -->
+  <!-- HALAMAN LOGIN & DAFTAR PEMUSTAKA -->
   <section id="page-login" class="d-none">
-    <div class="row justify-content-center">
-      <div class="col-md-4">
+    <div class="row justify-content-center g-4">
+      <div class="col-md-5">
         <div class="card shadow-sm border-0">
           <div class="card-body p-4">
-            <h4 class="text-center fw-bold mb-3">Login Pustakawan</h4>
+            <h4 class="text-center fw-bold mb-3">Login Sistem</h4>
             <form onsubmit="handleLogin(event)">
               <div class="mb-3">
                 <label class="form-label">Username</label>
@@ -105,15 +117,90 @@
               <button type="submit" class="btn btn-primary w-100">Masuk</button>
             </form>
             <div class="alert alert-secondary mt-3 mb-0 small">
-              Akun default: <strong>admin</strong> / <strong>admin123</strong>
+              <strong>Akun Pustakawan:</strong> <code>pustakawan</code> / <code>pustakawan123</code> (atau <code>admin</code> / <code>admin123</code>)<br>
+              <strong>Akun Pemustaka:</strong> <code>pemustaka</code> / <code>pemustaka123</code>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-5">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4">
+            <h4 class="text-center fw-bold mb-3">Daftar Akun Pemustaka</h4>
+            <form onsubmit="handleDaftarPemustaka(event)">
+              <div class="mb-2">
+                <label class="form-label small">Nama Lengkap</label>
+                <input type="text" id="regNama" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small">ID Anggota (contoh: AGT003)</label>
+                <input type="text" id="regIdAnggota" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small">Prodi / Instansi</label>
+                <input type="text" id="regProdi" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small">Username</label>
+                <input type="text" id="regUser" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small">Password</label>
+                <input type="password" id="regPass" class="form-control" required minlength="4">
+              </div>
+              <button type="submit" class="btn btn-success w-100">Daftar Sebagai Pemustaka</button>
+            </form>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- HALAMAN DASHBOARD -->
+  <!-- HALAMAN DAFTAR BACAAN PEMUSTAKA -->
+  <section id="page-bacaan" class="d-none">
+    <h4 class="fw-bold mb-3">Daftar Bacaan Saya (Pemustaka)</h4>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Kode</th>
+              <th>Judul</th>
+              <th>Pengarang</th>
+              <th>Stok</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="bacaanBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN PINJAMAN SAYA (PEMUSTAKA) -->
+  <section id="page-pinjamanSaya" class="d-none">
+    <h4 class="fw-bold mb-3">Riwayat & Status Pinjaman Saya</h4>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Buku</th>
+              <th>Tgl Pinjam</th>
+              <th>Jatuh Tempo</th>
+              <th>Tgl Kembali</th>
+              <th>Keterlambatan & Denda</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="pinjamanSayaBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN DASHBOARD PUSTAKAWAN -->
   <section id="page-dashboard" class="d-none">
     <h4 class="fw-bold">Dashboard Pustakawan</h4>
     <p class="text-muted">Login sebagai: <strong id="activeUserLabel"></strong></p>
@@ -274,7 +361,7 @@
 
       <div class="col-md-6">
         <div class="card border-0 shadow-sm">
-          <div class="card-header bg-white fw-bold">Tambah Username Admin Baru</div>
+          <div class="card-header bg-white fw-bold">Tambah Username Baru</div>
           <div class="card-body">
             <form onsubmit="handleTambahUser(event)">
               <div class="mb-2">
@@ -282,6 +369,12 @@
               </div>
               <div class="mb-2">
                 <input type="text" id="newUsername" class="form-control" placeholder="Username Baru" required>
+              </div>
+              <div class="mb-2">
+                <select id="newRole" class="form-select">
+                  <option value="pustakawan">Pustakawan</option>
+                  <option value="pemustaka">Pemustaka</option>
+                </select>
               </div>
               <div class="mb-3">
                 <input type="password" id="newPassword" class="form-control" placeholder="Password" required minlength="4">
@@ -297,7 +390,7 @@
       <div class="card-header bg-white fw-bold">Daftar Akun Terdaftar</div>
       <div class="card-body">
         <table class="table table-bordered">
-          <thead><tr><th>Username</th><th>Nama Lengkap</th></tr></thead>
+          <thead><tr><th>Username</th><th>Nama Lengkap</th><th>Peran</th></tr></thead>
           <tbody id="usersBody"></tbody>
         </table>
       </div>
@@ -367,6 +460,7 @@
     </div>
   </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="app.js"></script>
 </body>
