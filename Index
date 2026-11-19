@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Otomasi Perpustakaan (OPAC & Sirkulasi)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm no-print">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="#" onclick="showPage('opac')">📚 Otomasi Perpustakaan</a>
+    <div class="d-flex flex-wrap gap-2 align-items-center" id="navMenu">
+      <button class="btn btn-outline-light btn-sm" onclick="showPage('opac')">OPAC Publik</button>
+      <span id="adminNav" class="d-none">
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('dashboard')">Dashboard</button>
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('bibliografi')">Bibliografi</button>
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('anggota')">Keanggotaan</button>
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('sirkulasi')">Sirkulasi</button>
+        <button class="btn btn-outline-light btn-sm" onclick="showPage('akun')">Akun & Password</button>
+        <button class="btn btn-warning btn-sm fw-bold" onclick="logout()">Logout</button>
+      </span>
+      <button class="btn btn-light btn-sm fw-bold" id="btnLoginNav" onclick="showPage('login')">Login Pustakawan</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <div id="alertBox"></div>
+
+  <!-- HALAMAN OPAC PUBLIK -->
+  <section id="page-opac">
+    <div class="card shadow-sm border-0 mb-4 no-print">
+      <div class="card-body p-4">
+        <h4 class="text-center fw-bold mb-3">Online Public Access Catalog (OPAC)</h4>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <select id="opacKriteria" class="form-select" onchange="renderOPAC()">
+              <option value="semua">Semua Kriteria</option>
+              <option value="judul">Judul Buku</option>
+              <option value="pengarang">Pengarang</option>
+              <option value="penerbit">Penerbit</option>
+              <option value="tahun">Tahun Terbit</option>
+              <option value="kategori">Subjek / Kategori</option>
+            </select>
+          </div>
+          <div class="col-md-7">
+            <input type="text" id="opacKeyword" class="form-control" placeholder="Ketik kata kunci pencarian..." oninput="renderOPAC()">
+          </div>
+          <div class="col-md-2 d-grid">
+            <button class="btn btn-primary" onclick="renderOPAC()">Cari</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="text-muted mb-0" id="opacCount"></h6>
+          <small class="text-muted no-print">Data tersimpan di browser (LocalStorage)</small>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Kode</th>
+                <th>Judul & ISBN</th>
+                <th>Pengarang</th>
+                <th>Penerbit (Tahun)</th>
+                <th>Kategori</th>
+                <th>Ketersediaan</th>
+              </tr>
+            </thead>
+            <tbody id="opacBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN LOGIN -->
+  <section id="page-login" class="d-none">
+    <div class="row justify-content-center">
+      <div class="col-md-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4">
+            <h4 class="text-center fw-bold mb-3">Login Pustakawan</h4>
+            <form onsubmit="handleLogin(event)">
+              <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input type="text" id="loginUser" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" id="loginPass" class="form-control" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-100">Masuk</button>
+            </form>
+            <div class="alert alert-secondary mt-3 mb-0 small">
+              Akun default: <strong>admin</strong> / <strong>admin123</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN DASHBOARD -->
+  <section id="page-dashboard" class="d-none">
+    <h4 class="fw-bold">Dashboard Pustakawan</h4>
+    <p class="text-muted">Login sebagai: <strong id="activeUserLabel"></strong></p>
+    <div class="row g-3 mt-1">
+      <div class="col-md-4">
+        <div class="card bg-primary text-white border-0 shadow-sm">
+          <div class="card-body">
+            <h6>Total Stok Koleksi</h6>
+            <h2 id="statStok">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-success text-white border-0 shadow-sm">
+          <div class="card-body">
+            <h6>Anggota Terdaftar</h6>
+            <h2 id="statAnggota">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-warning text-dark border-0 shadow-sm">
+          <div class="card-body">
+            <h6>Sedang Dipinjam</h6>
+            <h2 id="statPinjam">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-outline-danger btn-sm" onclick="resetDemoData()">🔄 Reset Data Contoh ke Awal</button>
+    </div>
+  </section>
+
+  <!-- HALAMAN BIBLIOGRAFI -->
+  <section id="page-bibliografi" class="d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+      <h4 class="fw-bold mb-0">Manajemen Bibliografi</h4>
+      <div class="d-flex gap-2">
+        <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Cetak Katalog & Barcode</button>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBuku" onclick="bukaFormBuku()">+ Tambah Buku</button>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Barcode</th>
+              <th>Judul & ISBN</th>
+              <th>Pengarang</th>
+              <th>Penerbit (Tahun)</th>
+              <th>Kategori</th>
+              <th>Stok</th>
+              <th class="no-print">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="bukuBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN KEANGGOTAAN -->
+  <section id="page-anggota" class="d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+      <h4 class="fw-bold mb-0">Manajemen Keanggotaan</h4>
+      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnggota" onclick="bukaFormAnggota()">+ Tambah Anggota</button>
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>ID Anggota</th>
+              <th>Nama</th>
+              <th>Prodi / Instansi</th>
+              <th>No. HP</th>
+              <th>Alamat</th>
+              <th class="no-print">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="anggotaBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN SIRKULASI -->
+  <section id="page-sirkulasi" class="d-none">
+    <h4 class="fw-bold mb-3">Sirkulasi Peminjaman & Pengembalian</h4>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white fw-bold">Form Peminjaman Buku (Denda Terlambat: Rp 1.000 / hari)</div>
+      <div class="card-body">
+        <form onsubmit="handlePinjam(event)" class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small">Anggota</label>
+            <select id="pinjamAnggota" class="form-select" required></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Buku (Stok Tersedia)</label>
+            <select id="pinjamBuku" class="form-select" required></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Tgl Pinjam</label>
+            <input type="date" id="tglPinjam" class="form-control" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Jatuh Tempo</label>
+            <input type="date" id="tglTempo" class="form-control" required>
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Pinjam</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-bold">Riwayat Transaksi Sirkulasi</div>
+      <div class="card-body table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Anggota</th>
+              <th>Buku</th>
+              <th>Tgl Pinjam</th>
+              <th>Jatuh Tempo</th>
+              <th>Tgl Kembali</th>
+              <th>Keterlambatan & Denda</th>
+              <th>Status / Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="sirkulasiBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- HALAMAN AKUN & PASSWORD -->
+  <section id="page-akun" class="d-none">
+    <h4 class="fw-bold mb-3">Manajemen Akun, Tambah Username & Ganti Password</h4>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white fw-bold">Ganti Password Akun Aktif</div>
+          <div class="card-body">
+            <form onsubmit="handleGantiPassword(event)">
+              <div class="mb-3">
+                <label class="form-label">Password Baru</label>
+                <input type="password" id="passBaru" class="form-control" required minlength="4">
+              </div>
+              <button type="submit" class="btn btn-warning">Simpan Password Baru</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white fw-bold">Tambah Username Admin Baru</div>
+          <div class="card-body">
+            <form onsubmit="handleTambahUser(event)">
+              <div class="mb-2">
+                <input type="text" id="newNama" class="form-control" placeholder="Nama Lengkap" required>
+              </div>
+              <div class="mb-2">
+                <input type="text" id="newUsername" class="form-control" placeholder="Username Baru" required>
+              </div>
+              <div class="mb-3">
+                <input type="password" id="newPassword" class="form-control" placeholder="Password" required minlength="4">
+              </div>
+              <button type="submit" class="btn btn-primary">Tambah Username</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+      <div class="card-header bg-white fw-bold">Daftar Akun Terdaftar</div>
+      <div class="card-body">
+        <table class="table table-bordered">
+          <thead><tr><th>Username</th><th>Nama Lengkap</th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- MODAL BUKU -->
+<div class="modal fade" id="modalBuku" tabindex="-1">
+  <div class="modal-dialog">
+    <form onsubmit="simpanBuku(event)" class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="modalBukuTitle">Tambah Buku</h5></div>
+      <div class="modal-body">
+        <input type="hidden" id="bukuEditIndex">
+        <input type="text" id="bKode" class="form-control mb-2" placeholder="Kode Eksemplar (cth: B004)" required>
+        <input type="text" id="bJudul" class="form-control mb-2" placeholder="Judul Buku" required>
+        <input type="text" id="bPengarang" class="form-control mb-2" placeholder="Pengarang" required>
+        <input type="text" id="bPenerbit" class="form-control mb-2" placeholder="Penerbit" required>
+        <input type="number" id="bTahun" class="form-control mb-2" placeholder="Tahun Terbit" required>
+        <input type="text" id="bKategori" class="form-control mb-2" placeholder="Kategori / Subjek" required>
+        <input type="text" id="bIsbn" class="form-control mb-2" placeholder="ISBN">
+        <input type="number" id="bStok" class="form-control mb-2" placeholder="Jumlah Stok" min="0" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL ANGGOTA -->
+<div class="modal fade" id="modalAnggota" tabindex="-1">
+  <div class="modal-dialog">
+    <form onsubmit="simpanAnggota(event)" class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="modalAnggotaTitle">Tambah Anggota</h5></div>
+      <div class="modal-body">
+        <input type="hidden" id="anggotaMode" value="add">
+        <input type="text" id="aId" class="form-control mb-2" placeholder="ID Anggota (cth: AGT003)" required>
+        <input type="text" id="aNama" class="form-control mb-2" placeholder="Nama Lengkap" required>
+        <input type="text" id="aProdi" class="form-control mb-2" placeholder="Prodi / Instansi" required>
+        <input type="text" id="aHp" class="form-control mb-2" placeholder="No. HP" required>
+        <textarea id="aAlamat" class="form-control mb-2" placeholder="Alamat" required></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL KARTU ANGGOTA -->
+<div class="modal fade" id="modalKartu" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center border border-primary m-2 rounded" id="areaKartu">
+        <h6 class="fw-bold text-primary mb-1">KARTU ANGGOTA PERPUSTAKAAN</h6>
+        <hr class="my-1">
+        <p class="mb-0 fw-bold" id="kartuNama"></p>
+        <small class="text-muted d-block mb-2" id="kartuProdi"></small>
+        <svg id="kartuBarcode"></svg>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-sm w-100" onclick="cetakKartu()">🖨️ Cetak Kartu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
