@@ -3,41 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Otomasi Perpustakaan - Pemustaka & Pustakawan</title>
+  <title>Sistem Otomasi Perpustakaan</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
-    @media print {
-      .no-print { display: none !important; }
-    }
+    @media print { .no-print { display: none !important; } }
   </style>
 </head>
 <body class="bg-light">
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm no-print">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="#" onclick="showPage('opac'); return false;">📚 Otomasi Perpustakaan</a>
-    <div class="d-flex flex-wrap gap-2 align-items-center" id="navMenu">
-      <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('opac')">OPAC</button>
+    <a class="navbar-brand fw-bold" href="#opac" id="brandLink">📚 Otomasi Perpustakaan</a>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <button type="button" class="btn btn-outline-light btn-sm" id="navOpac">OPAC</button>
 
-      <!-- Menu Khusus Pemustaka -->
       <span id="pemustakaNav" class="d-none">
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('bacaan')">Daftar Bacaan (<span id="badgeBacaan">0</span>)</button>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('pinjamanSaya')">Pinjaman Saya</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navBacaan">Daftar Bacaan (<span id="badgeBacaan">0</span>)</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navPinjamanSaya">Pinjaman Saya</button>
       </span>
 
-      <!-- Menu Khusus Pustakawan -->
       <span id="pustakawanNav" class="d-none">
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('dashboard')">Dashboard</button>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('bibliografi')">Bibliografi</button>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('anggota')">Keanggotaan</button>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('sirkulasi')">Sirkulasi</button>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="showPage('akun')">Akun & Password</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navDashboard">Dashboard</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navBibliografi">Bibliografi</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navAnggota">Keanggotaan</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navSirkulasi">Sirkulasi</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="navAkun">Akun & Password</button>
       </span>
 
       <span id="userBadge" class="badge bg-info text-dark d-none"></span>
-      <button type="button" class="btn btn-warning btn-sm fw-bold d-none" id="btnLogout" onclick="logout()">Logout</button>
-      <button type="button" class="btn btn-light btn-sm fw-bold" id="btnLoginNav" onclick="showPage('login')">Login / Daftar</button>
+      <button type="button" class="btn btn-warning btn-sm fw-bold d-none" id="btnLogout">Logout</button>
+      <button type="button" class="btn btn-light btn-sm fw-bold" id="btnLoginNav">Login / Daftar</button>
     </div>
   </div>
 </nav>
@@ -45,14 +41,14 @@
 <div class="container my-4">
   <div id="alertBox"></div>
 
-  <!-- HALAMAN OPAC -->
+  <!-- OPAC -->
   <section id="page-opac">
     <div class="card shadow-sm border-0 mb-4 no-print">
       <div class="card-body p-4">
         <h4 class="text-center fw-bold mb-3">Online Public Access Catalog (OPAC)</h4>
         <div class="row g-2">
           <div class="col-md-3">
-            <select id="opacKriteria" class="form-select" onchange="renderOPAC()">
+            <select id="opacKriteria" class="form-select">
               <option value="semua">Semua Kriteria</option>
               <option value="judul">Judul Buku</option>
               <option value="pengarang">Pengarang</option>
@@ -62,10 +58,10 @@
             </select>
           </div>
           <div class="col-md-7">
-            <input type="text" id="opacKeyword" class="form-control" placeholder="Ketik kata kunci pencarian..." oninput="renderOPAC()">
+            <input type="text" id="opacKeyword" class="form-control" placeholder="Ketik kata kunci pencarian...">
           </div>
           <div class="col-md-2 d-grid">
-            <button type="button" class="btn btn-primary" onclick="renderOPAC()">Cari</button>
+            <button type="button" class="btn btn-primary" id="btnCariOpac">Cari</button>
           </div>
         </div>
       </div>
@@ -75,7 +71,7 @@
       <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <h6 class="text-muted mb-0" id="opacCount"></h6>
-          <button type="button" class="btn btn-outline-secondary btn-sm no-print" onclick="resetDemoData(true)">🔄 Pulihkan Data Buku Awal</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm no-print" id="btnResetOpac">🔄 Pulihkan Data Buku</button>
         </div>
         <div class="table-responsive">
           <table class="table table-hover align-middle">
@@ -97,14 +93,14 @@
     </div>
   </section>
 
-  <!-- HALAMAN LOGIN & DAFTAR PEMUSTAKA -->
+  <!-- LOGIN & DAFTAR PEMUSTAKA -->
   <section id="page-login" class="d-none">
     <div class="row justify-content-center g-4">
       <div class="col-md-5">
         <div class="card shadow-sm border-0">
           <div class="card-body p-4">
             <h4 class="text-center fw-bold mb-3">Login Sistem</h4>
-            <form onsubmit="handleLogin(event)">
+            <form id="formLogin">
               <div class="mb-3">
                 <label class="form-label">Username</label>
                 <input type="text" id="loginUser" class="form-control" required>
@@ -127,13 +123,13 @@
         <div class="card shadow-sm border-0">
           <div class="card-body p-4">
             <h4 class="text-center fw-bold mb-3">Daftar Akun Pemustaka</h4>
-            <form onsubmit="handleDaftarPemustaka(event)">
+            <form id="formDaftar">
               <div class="mb-2">
                 <label class="form-label small">Nama Lengkap</label>
                 <input type="text" id="regNama" class="form-control" required>
               </div>
               <div class="mb-2">
-                <label class="form-label small">ID Anggota (contoh: AGT003)</label>
+                <label class="form-label small">ID Anggota (cth: AGT003)</label>
                 <input type="text" id="regIdAnggota" class="form-control" required>
               </div>
               <div class="mb-2">
@@ -156,20 +152,14 @@
     </div>
   </section>
 
-  <!-- HALAMAN DAFTAR BACAAN PEMUSTAKA -->
+  <!-- DAFTAR BACAAN -->
   <section id="page-bacaan" class="d-none">
-    <h4 class="fw-bold mb-3">Daftar Bacaan Saya (Pemustaka)</h4>
+    <h4 class="fw-bold mb-3">Daftar Bacaan Saya</h4>
     <div class="card border-0 shadow-sm">
       <div class="card-body table-responsive">
         <table class="table table-bordered align-middle">
           <thead class="table-light">
-            <tr>
-              <th>Kode</th>
-              <th>Judul</th>
-              <th>Pengarang</th>
-              <th>Stok</th>
-              <th>Aksi</th>
-            </tr>
+            <tr><th>Kode</th><th>Judul</th><th>Pengarang</th><th>Stok</th><th>Aksi</th></tr>
           </thead>
           <tbody id="bacaanBody"></tbody>
         </table>
@@ -177,21 +167,14 @@
     </div>
   </section>
 
-  <!-- HALAMAN PINJAMAN SAYA (PEMUSTAKA) -->
+  <!-- PINJAMAN SAYA -->
   <section id="page-pinjamanSaya" class="d-none">
     <h4 class="fw-bold mb-3">Riwayat & Status Pinjaman Saya</h4>
     <div class="card border-0 shadow-sm">
       <div class="card-body table-responsive">
         <table class="table table-bordered align-middle">
           <thead class="table-light">
-            <tr>
-              <th>Buku</th>
-              <th>Tgl Pinjam</th>
-              <th>Jatuh Tempo</th>
-              <th>Tgl Kembali</th>
-              <th>Keterlambatan & Denda</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>Buku</th><th>Tgl Pinjam</th><th>Jatuh Tempo</th><th>Tgl Kembali</th><th>Keterlambatan & Denda</th><th>Status</th></tr>
           </thead>
           <tbody id="pinjamanSayaBody"></tbody>
         </table>
@@ -199,63 +182,34 @@
     </div>
   </section>
 
-  <!-- HALAMAN DASHBOARD PUSTAKAWAN -->
+  <!-- DASHBOARD -->
   <section id="page-dashboard" class="d-none">
     <h4 class="fw-bold">Dashboard Pustakawan</h4>
     <p class="text-muted">Login sebagai: <strong id="activeUserLabel"></strong></p>
     <div class="row g-3 mt-1">
-      <div class="col-md-4">
-        <div class="card bg-primary text-white border-0 shadow-sm">
-          <div class="card-body">
-            <h6>Total Stok Koleksi</h6>
-            <h2 id="statStok">0</h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card bg-success text-white border-0 shadow-sm">
-          <div class="card-body">
-            <h6>Anggota Terdaftar</h6>
-            <h2 id="statAnggota">0</h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card bg-warning text-dark border-0 shadow-sm">
-          <div class="card-body">
-            <h6>Sedang Dipinjam</h6>
-            <h2 id="statPinjam">0</h2>
-          </div>
-        </div>
-      </div>
+      <div class="col-md-4"><div class="card bg-primary text-white border-0 shadow-sm"><div class="card-body"><h6>Total Stok Koleksi</h6><h2 id="statStok">0</h2></div></div></div>
+      <div class="col-md-4"><div class="card bg-success text-white border-0 shadow-sm"><div class="card-body"><h6>Anggota Terdaftar</h6><h2 id="statAnggota">0</h2></div></div></div>
+      <div class="col-md-4"><div class="card bg-warning text-dark border-0 shadow-sm"><div class="card-body"><h6>Sedang Dipinjam</h6><h2 id="statPinjam">0</h2></div></div></div>
     </div>
     <div class="mt-4">
-      <button type="button" class="btn btn-outline-danger btn-sm" onclick="resetDemoData(false)">🔄 Reset Semua Data Contoh ke Awal</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" id="btnResetAll">🔄 Reset Semua Data ke Awal</button>
     </div>
   </section>
 
-  <!-- HALAMAN BIBLIOGRAFI -->
+  <!-- BIBLIOGRAFI -->
   <section id="page-bibliografi" class="d-none">
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
       <h4 class="fw-bold mb-0">Manajemen Bibliografi</h4>
       <div class="d-flex gap-2">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Cetak Katalog & Barcode</button>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBuku" onclick="bukaFormBuku()">+ Tambah Buku</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnPrintKatalog">🖨️ Cetak Katalog & Barcode</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnBukaModalBuku">+ Tambah Buku</button>
       </div>
     </div>
     <div class="card border-0 shadow-sm">
       <div class="card-body table-responsive">
         <table class="table table-bordered align-middle">
           <thead class="table-light">
-            <tr>
-              <th>Barcode</th>
-              <th>Judul & ISBN</th>
-              <th>Pengarang</th>
-              <th>Penerbit (Tahun)</th>
-              <th>Kategori</th>
-              <th>Stok</th>
-              <th class="no-print">Aksi</th>
-            </tr>
+            <tr><th>Barcode</th><th>Judul & ISBN</th><th>Pengarang</th><th>Penerbit (Tahun)</th><th>Kategori</th><th>Stok</th><th class="no-print">Aksi</th></tr>
           </thead>
           <tbody id="bukuBody"></tbody>
         </table>
@@ -263,24 +217,17 @@
     </div>
   </section>
 
-  <!-- HALAMAN KEANGGOTAAN -->
+  <!-- KEANGGOTAAN -->
   <section id="page-anggota" class="d-none">
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
       <h4 class="fw-bold mb-0">Manajemen Keanggotaan</h4>
-      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnggota" onclick="bukaFormAnggota()">+ Tambah Anggota</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnBukaModalAnggota">+ Tambah Anggota</button>
     </div>
     <div class="card border-0 shadow-sm">
       <div class="card-body table-responsive">
         <table class="table table-bordered align-middle">
           <thead class="table-light">
-            <tr>
-              <th>ID Anggota</th>
-              <th>Nama</th>
-              <th>Prodi / Instansi</th>
-              <th>No. HP</th>
-              <th>Alamat</th>
-              <th class="no-print">Aksi</th>
-            </tr>
+            <tr><th>ID Anggota</th><th>Nama</th><th>Prodi / Instansi</th><th>No. HP</th><th>Alamat</th><th class="no-print">Aksi</th></tr>
           </thead>
           <tbody id="anggotaBody"></tbody>
         </table>
@@ -288,13 +235,13 @@
     </div>
   </section>
 
-  <!-- HALAMAN SIRKULASI -->
+  <!-- SIRKULASI -->
   <section id="page-sirkulasi" class="d-none">
     <h4 class="fw-bold mb-3">Sirkulasi Peminjaman & Pengembalian</h4>
     <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-white fw-bold">Form Peminjaman Buku (Denda Terlambat: Rp 1.000 / hari)</div>
+      <div class="card-header bg-white fw-bold">Form Peminjaman Buku (Denda: Rp 1.000 / hari)</div>
       <div class="card-body">
-        <form onsubmit="handlePinjam(event)" class="row g-2">
+        <form id="formPinjam" class="row g-2">
           <div class="col-md-3">
             <label class="form-label small">Anggota</label>
             <select id="pinjamAnggota" class="form-select" required></select>
@@ -323,15 +270,7 @@
       <div class="card-body table-responsive">
         <table class="table table-bordered align-middle">
           <thead class="table-light">
-            <tr>
-              <th>Anggota</th>
-              <th>Buku</th>
-              <th>Tgl Pinjam</th>
-              <th>Jatuh Tempo</th>
-              <th>Tgl Kembali</th>
-              <th>Keterlambatan & Denda</th>
-              <th>Status / Aksi</th>
-            </tr>
+            <tr><th>Anggota</th><th>Buku</th><th>Tgl Pinjam</th><th>Jatuh Tempo</th><th>Tgl Kembali</th><th>Keterlambatan & Denda</th><th>Status / Aksi</th></tr>
           </thead>
           <tbody id="sirkulasiBody"></tbody>
         </table>
@@ -339,7 +278,7 @@
     </div>
   </section>
 
-  <!-- HALAMAN AKUN & PASSWORD -->
+  <!-- AKUN & PASSWORD -->
   <section id="page-akun" class="d-none">
     <h4 class="fw-bold mb-3">Manajemen Akun, Tambah Username & Ganti Password</h4>
     <div class="row g-4">
@@ -347,7 +286,7 @@
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-white fw-bold">Ganti Password Akun Aktif</div>
           <div class="card-body">
-            <form onsubmit="handleGantiPassword(event)">
+            <form id="formGantiPass">
               <div class="mb-3">
                 <label class="form-label">Password Baru</label>
                 <input type="password" id="passBaru" class="form-control" required minlength="4">
@@ -362,22 +301,16 @@
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-white fw-bold">Tambah Username Baru</div>
           <div class="card-body">
-            <form onsubmit="handleTambahUser(event)">
-              <div class="mb-2">
-                <input type="text" id="newNama" class="form-control" placeholder="Nama Lengkap" required>
-              </div>
-              <div class="mb-2">
-                <input type="text" id="newUsername" class="form-control" placeholder="Username Baru" required>
-              </div>
+            <form id="formTambahUser">
+              <div class="mb-2"><input type="text" id="newNama" class="form-control" placeholder="Nama Lengkap" required></div>
+              <div class="mb-2"><input type="text" id="newUsername" class="form-control" placeholder="Username Baru" required></div>
               <div class="mb-2">
                 <select id="newRole" class="form-select">
                   <option value="pustakawan">Pustakawan</option>
                   <option value="pemustaka">Pemustaka</option>
                 </select>
               </div>
-              <div class="mb-3">
-                <input type="password" id="newPassword" class="form-control" placeholder="Password" required minlength="4">
-              </div>
+              <div class="mb-3"><input type="password" id="newPassword" class="form-control" placeholder="Password" required minlength="4"></div>
               <button type="submit" class="btn btn-primary">Tambah Username</button>
             </form>
           </div>
@@ -400,7 +333,7 @@
 <!-- MODAL BUKU -->
 <div class="modal fade" id="modalBuku" tabindex="-1">
   <div class="modal-dialog">
-    <form onsubmit="simpanBuku(event)" class="modal-content">
+    <form id="formBuku" class="modal-content">
       <div class="modal-header"><h5 class="modal-title" id="modalBukuTitle">Tambah Buku</h5></div>
       <div class="modal-body">
         <input type="hidden" id="bukuEditIndex">
@@ -424,7 +357,7 @@
 <!-- MODAL ANGGOTA -->
 <div class="modal fade" id="modalAnggota" tabindex="-1">
   <div class="modal-dialog">
-    <form onsubmit="simpanAnggota(event)" class="modal-content">
+    <form id="formAnggota" class="modal-content">
       <div class="modal-header"><h5 class="modal-title" id="modalAnggotaTitle">Tambah Anggota</h5></div>
       <div class="modal-body">
         <input type="hidden" id="anggotaMode" value="add">
@@ -442,7 +375,7 @@
   </div>
 </div>
 
-<!-- MODAL KARTU ANGGOTA -->
+<!-- MODAL KARTU -->
 <div class="modal fade" id="modalKartu" tabindex="-1">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
@@ -454,7 +387,7 @@
         <svg id="kartuBarcode"></svg>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary btn-sm w-100" onclick="cetakKartu()">🖨️ Cetak Kartu</button>
+        <button type="button" class="btn btn-primary btn-sm w-100" id="btnCetakKartu">🖨️ Cetak Kartu</button>
       </div>
     </div>
   </div>
