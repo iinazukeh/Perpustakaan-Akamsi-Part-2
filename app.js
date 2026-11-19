@@ -105,7 +105,7 @@ function handleLogin(e) {
   e.preventDefault();
   const u = document.getElementById("loginUser").value.trim();
   const p = document.getElementById("loginPass").value;
-  const found = db.users.find(x => x.username === u && x.password === p);
+  const found = db.users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
   if (!found) {
     notify("Username atau password salah!", "danger");
     return;
@@ -125,18 +125,39 @@ function handleDaftarPemustaka(e) {
   const uname = document.getElementById("regUser").value.trim();
   const pass = document.getElementById("regPass").value;
 
-  if (db.users.some(u => u.username === uname)) {
-    notify("Username sudah dipakai!", "danger");
+  if (!nama || !idAnggota || !prodi || !uname || pass.length < 4) {
+    notify("Lengkapi semua kolom dan pastikan password minimal 4 karakter.", "warning");
     return;
   }
-  if (!db.anggota.some(a => a.id === idAnggota)) {
-    db.anggota.push({ id: idAnggota, nama, prodi, hp: "-", alamat: "Semarang" });
+
+  if (db.users.some(u => u.username.toLowerCase() === uname.toLowerCase())) {
+    notify("Username sudah dipakai! Gunakan username lain.", "danger");
+    return;
   }
-  db.users.push({ username: uname, password: pass, nama, role: "pemustaka", idAnggota });
+
+  if (!db.anggota.some(a => a.id.toLowerCase() === idAnggota.toLowerCase())) {
+    db.anggota.push({
+      id: idAnggota,
+      nama: nama,
+      prodi: prodi,
+      hp: "-",
+      alamat: "Semarang"
+    });
+  }
+
+  db.users.push({
+    username: uname,
+    password: pass,
+    nama: nama,
+    role: "pemustaka",
+    idAnggota: idAnggota
+  });
+
   db.sessionUser = uname;
   saveDB(db);
+  e.target.reset();
   updateNavbar();
-  notify("Akun pemustaka berhasil dibuat dan Anda sudah login!");
+  notify(`Akun pemustaka "${uname}" berhasil dibuat dan Anda sudah login!`);
   showPage("opac");
 }
 
@@ -277,7 +298,7 @@ function renderPinjamanSaya() {
     const denda = telat * DENDA_PER_HARI;
     return `
       <tr>
-        <td>[${s.kodeBuku}] ${s.judulBuku}</td>
+        <td>[${s.kodeBuku}]${s.judulBuku}</td>
         <td>${s.tglPinjam}</td>
         <td>${s.tglTempo}</td>
         <td>${s.tglKembali || "-"}</td>
@@ -347,7 +368,7 @@ function renderBuku() {
   document.getElementById("bukuBody").innerHTML = db.buku.map((b, i) => `
     <tr>
       <td class="text-center"><svg class="barcode-buku" jsvalue="${b.kode}" jsheight="32" jswidth="1.4" jsfontsize="11"></svg></td>
-      <td><strong>${b.judul}</strong><br><small>ISBN: ${b.isbn || "-"}</small></td>
+      <td><strong>${b.judul}</strong><br><small>ISBN:${b.isbn || "-"}</small></td>
       <td>${b.pengarang}</td>
       <td>${b.penerbit} (${b.tahun})</td>
       <td>${b.kategori}</td>
@@ -410,7 +431,7 @@ function hapusAnggota(idx) {
 function lihatKartu(idx) {
   const a = db.anggota[idx];
   document.getElementById("kartuNama").textContent = a.nama;
-  document.getElementById("kartuProdi").textContent = `${a.prodi} • ${a.id}`;
+  document.getElementById("kartuProdi").textContent = `${a.prodi} •${a.id}`;
   JsBarcode("#kartuBarcode", a.id, { height: 32, width: 1.5, fontSize: 12 });
 }
 
@@ -454,117 +475,8 @@ function renderSirkulasi() {
   if (!tglPinjam.value) tglPinjam.value = today;
   if (!tglTempo.value) tglTempo.value = plus7;
 
-  pinjamAnggota.innerHTML = db.anggota.map(a => `<option value="${a.id}">${a.id} - ${a.nama}</option>`).join("");
+  pinjamAnggota.innerHTML = db.anggota.map(a => `<option value="${a.id}">${a.id} -${a.nama}</option>`).join("");
   pinjamBuku.innerHTML = db.buku
     .map((b, i) => ({ ...b, idx: i }))
     .filter(b => b.stok > 0)
-    .map(b => `<option value="${b.idx}">[${b.kode}] ${b.judul} (Stok: ${b.stok})</option>`)
-    .join("");
-
-  sirkulasiBody.innerHTML = db.sirkulasi.map((s, idx) => {
-    const tglBand = s.status === "Dipinjam" ? today : s.tglKembali;
-    const telat = hitungHariTelat(s.tglTempo, tglBand);
-    const denda = telat * DENDA_PER_HARI;
-    return `
-      <tr>
-        <td>${s.namaAnggota}<br><small class="text-muted">${s.idAnggota}</small></td>
-        <td>[${s.kodeBuku}] ${s.judulBuku}</td>
-        <td>${s.tglPinjam}</td>
-        <td>${s.tglTempo}</td>
-        <td>${s.tglKembali || "-"}</td>
-        <td>${telat > 0
-          ? `<span class="text-danger fw-bold">Telat ${telat} hari (Rp ${denda.toLocaleString("id-ID")})</span>`
-          : `<span class="text-success">Tepat Waktu (Rp 0)</span>`}</td>
-        <td>${s.status === "Dipinjam"
-          ? `<button class="btn btn-success btn-sm" onclick="kembalikanBuku(${idx})">Kembalikan</button>`
-          : `<span class="badge bg-secondary">Kembali</span>`}</td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function handlePinjam(e) {
-  e.preventDefault();
-  const a = db.anggota.find(x => x.id === pinjamAnggota.value);
-  const bIdx = Number(pinjamBuku.value);
-  const b = db.buku[bIdx];
-  if (!a || !b || b.stok <= 0) {
-    notify("Stok buku habis atau data tidak valid.", "danger");
-    return;
-  }
-  b.stok -= 1;
-  db.sirkulasi.unshift({
-    idAnggota: a.id,
-    namaAnggota: a.nama,
-    kodeBuku: b.kode,
-    judulBuku: b.judul,
-    tglPinjam: tglPinjam.value,
-    tglTempo: tglTempo.value,
-    tglKembali: null,
-    status: "Dipinjam"
-  });
-  saveDB(db);
-  renderSirkulasi();
-  notify("Peminjaman berhasil! Stok buku berkurang 1.");
-}
-
-function kembalikanBuku(idx) {
-  const s = db.sirkulasi[idx];
-  if (s.status !== "Dipinjam") return;
-  const today = new Date().toISOString().slice(0, 10);
-  s.tglKembali = today;
-  s.status = "Kembali";
-
-  const b = db.buku.find(x => x.kode === s.kodeBuku);
-  if (b) b.stok += 1;
-
-  const telat = hitungHariTelat(s.tglTempo, today);
-  const denda = telat * DENDA_PER_HARI;
-  saveDB(db);
-  renderSirkulasi();
-  notify(`Buku dikembalikan. Keterlambatan: ${telat} hari | Denda: Rp ${denda.toLocaleString("id-ID")}.`);
-}
-
-// AKUN & PASSWORD
-function handleGantiPassword(e) {
-  e.preventDefault();
-  const u = getActiveUser();
-  if (!u) return;
-  u.password = passBaru.value;
-  passBaru.value = "";
-  saveDB(db);
-  notify("Password berhasil diganti!");
-}
-
-function handleTambahUser(e) {
-  e.preventDefault();
-  const uname = newUsername.value.trim();
-  if (db.users.some(x => x.username === uname)) {
-    notify("Username sudah ada!", "danger");
-    return;
-  }
-  const role = newRole.value;
-  const nama = newNama.value.trim();
-  let idAnggota = null;
-  if (role === "pemustaka") {
-    idAnggota = "AGT" + String(db.anggota.length + 1).padStart(3, "0");
-    db.anggota.push({ id: idAnggota, nama, prodi: "Umum", hp: "-", alamat: "Semarang" });
-  }
-  db.users.push({ username: uname, nama, role, password: newPassword.value, idAnggota });
-  newUsername.value = "";
-  newNama.value = "";
-  newPassword.value = "";
-  saveDB(db);
-  renderUsers();
-  notify(`Akun ${role} baru berhasil ditambahkan!`);
-}
-
-function renderUsers() {
-  usersBody.innerHTML = db.users.map(u => `
-    <tr><td><strong>${u.username}</strong></td><td>${u.nama}</td><td><span class="badge bg-secondary">${u.role}</span></td></tr>
-  `).join("");
-}
-
-// INIT
-updateNavbar();
-showPage("opac");
+    .map(b => `<option value="${b.idx}">[${b.kode}] ${b.judul} (Stok:${b.stok})</
