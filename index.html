@@ -69,6 +69,7 @@
     <!-- Navigation Tabs -->
     <div class="bg-slate-50/80 border-t border-slate-200/80">
       <div id="navTabs" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 overflow-x-auto py-1.5">
+        <!-- Tombol OPAC Selalu Ada -->
         <button data-tab="opac" onclick="switchTab('opac')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer bg-indigo-600 text-white">
           🔍 OPAC Pencarian
         </button>
@@ -560,7 +561,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'librasys_role_db_v3';
+    const STORAGE_KEY = 'librasys_role_db_v4';
     const FINE_PER_DAY = 1000;
 
     function getTodayISO(offsetDays = 0) {
@@ -766,12 +767,13 @@
       const loggedControls = document.getElementById('loggedInControls');
       const roleBanner = document.getElementById('roleBanner');
       
-      const navTabs = document.getElementById('navTabs');
-
       // Sembunyikan SEMUA menu rahasia terlebih dahulu
       ['pemustaka', 'dashboard', 'bibliography', 'members', 'circulation', 'reset'].forEach(id => {
         const el = document.getElementById('menu-' + id);
-        if(el) el.classList.add('hidden');
+        if(el) {
+          el.classList.add('hidden');
+          el.classList.remove('flex'); // Paksa hilangkan flex jika ada
+        }
       });
 
       // Reset tombol tab pertama agar tetap aktif saat logout
