@@ -1,1255 +1,174 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LibraSys — Sistem Otomasi Perpustakaan</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
-    .barcode-lines {
-      background-image: repeating-linear-gradient(90deg,
-        #0f172a 0px, #0f172a 2px, transparent 2px, transparent 4px,
-        #0f172a 4px, #0f172a 5px, transparent 5px, transparent 8px);
-    }
-    @media print {
-      body * { visibility: hidden; }
-      #printArea, #printArea * { visibility: visible; }
-      #printArea { position: absolute; left: 0; top: 0; width: 100%; padding: 16px; }
-      .no-print { display: none !important; }
-    }
-    .book-card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
-    .book-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(79,70,229,0.18); border-color: #a5b4fc; }
-    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col">
-
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden transition-all duration-300 max-w-sm bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center gap-3 text-sm">
-    <span id="toastIcon" class="text-emerald-400 font-bold">✓</span>
-    <span id="toastMessage">Pesan notifikasi</span>
-  </div>
-
-  <!-- Navbar -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">LS</div>
-        <div>
-          <h1 class="font-bold text-slate-900 leading-tight text-base sm:text-lg">LibraSys Automation</h1>
-          <p class="text-xs text-slate-500 hidden sm:block">Sistem Otomasi Perpustakaan &amp; OPAC Terpadu</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <div id="authBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
-          <span class="w-2 h-2 rounded-full bg-amber-500" id="authDot"></span>
-          <span id="authStatusText">Mode Pengunjung (OPAC)</span>
-        </div>
-        <button id="btnOpenLogin" onclick="openLoginModal()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition shadow-sm cursor-pointer">Login Petugas</button>
-        <div id="loggedInControls" class="hidden items-center gap-2">
-          <button onclick="openAccountModal()" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium transition cursor-pointer">Akun &amp; Sandi</button>
-          <button onclick="logoutUser()" class="px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-medium transition cursor-pointer">Logout</button>
-        </div>
-      </div>
-    </div>
-    <div class="bg-slate-50/80 border-t border-slate-200/80">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 overflow-x-auto py-1.5">
-        <button data-tab="opac" onclick="switchTab('opac')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer bg-indigo-600 text-white">🔍 OPAC Pencarian</button>
-        <button data-tab="dashboard" onclick="switchTab('dashboard')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70">📊 Ringkasan</button>
-        <button data-tab="bibliography" onclick="switchTab('bibliography')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70">📚 Bibliografi</button>
-        <button data-tab="members" onclick="switchTab('members')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70">🪪 Keanggotaan</button>
-        <button data-tab="circulation" onclick="switchTab('circulation')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70">🔄 Sirkulasi &amp; Denda</button>
-        <button onclick="resetDemoData()" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Kembalikan data awal demo">↺ Reset Data Demo</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 no-print">
-
-    <div id="roleBanner" class="rounded-xl bg-indigo-50 border border-indigo-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-indigo-900">
-      <div>
-        <span class="font-semibold">Akses Publik OPAC Aktif:</span> Anda dapat mencari koleksi. Untuk mengelola data, silakan <button onclick="openLoginModal()" class="underline font-semibold hover:text-indigo-700 cursor-pointer">Login Petugas</button> (Default: <code class="bg-indigo-100 px-1.5 py-0.5 rounded">admin</code> / <code class="bg-indigo-100 px-1.5 py-0.5 rounded">admin123</code>).
-      </div>
-    </div>
-
-    <!-- OPAC -->
-    <section id="section-opac" class="tab-section space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <div class="mb-5">
-          <h2 class="text-xl font-bold text-slate-900">Katalog Induk Terakses Publik (OPAC)</h2>
-          <p class="text-sm text-slate-500 mt-1">Cari koleksi berdasarkan judul, pengarang, ISBN, nomor panggil, kategori, tahun, atau nama file ebook.</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div class="md:col-span-5">
-            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Kata Kunci</label>
-            <input id="opacQuery" oninput="renderOPAC()" type="text" placeholder="Judul, pengarang, ISBN, penerbit, no. panggil, file..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Field</label>
-            <select id="opacField" onchange="renderOPAC()" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white">
-              <option value="all">Semua Field</option>
-              <option value="title">Judul</option>
-              <option value="author">Pengarang</option>
-              <option value="isbn">ISBN</option>
-              <option value="publisher">Penerbit</option>
-              <option value="callNumber">No. Panggil</option>
-              <option value="fileName">Nama File Ebook</option>
-            </select>
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Kategori</label>
-            <select id="opacCategory" onchange="renderOPAC()" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white">
-              <option value="all">Semua Kategori</option>
-              <option value="Fiksi & Novel">Fiksi &amp; Novel</option>
-              <option value="Religi & Spiritual">Religi &amp; Spiritual</option>
-              <option value="Ilmu Perpustakaan & Kearsipan">Ilmu Perpustakaan &amp; Kearsipan</option>
-              <option value="Teknologi Informasi">Teknologi Informasi</option>
-              <option value="Filsafat & Sastra">Filsafat &amp; Sastra</option>
-              <option value="Manajemen & Sosial">Manajemen &amp; Sosial</option>
-              <option value="Sains & Metode Riset">Sains &amp; Metode Riset</option>
-            </select>
-          </div>
-          <div class="md:col-span-1">
-            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tahun</label>
-            <input id="opacYear" oninput="renderOPAC()" type="number" placeholder="2024" class="w-full px-2.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Ketersediaan</label>
-            <select id="opacAvailability" onchange="renderOPAC()" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white">
-              <option value="all">Semua</option>
-              <option value="available">Tersedia (Stok &gt; 0)</option>
-              <option value="unavailable">Habis / Dipinjam</option>
-            </select>
-          </div>
-        </div>
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 border-t border-slate-100 pt-3">
-          <span id="opacResultCount">Menampilkan 0 koleksi</span>
-          <button onclick="resetOPACFilters()" class="text-indigo-600 hover:underline font-medium cursor-pointer">Bersihkan Filter</button>
-        </div>
-      </div>
-      <div id="opacResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
-    </section>
-
-    <!-- Dashboard -->
-    <section id="section-dashboard" class="tab-section hidden space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Judul Bibliografi</p>
-          <p id="statTitles" class="text-3xl font-bold text-slate-900 mt-2">0</p>
-          <p class="text-xs text-slate-500 mt-1">Total eksemplar: <span id="statCopies" class="font-semibold text-slate-700">0</span></p>
-        </div>
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Anggota Aktif</p>
-          <p id="statMembers" class="text-3xl font-bold text-indigo-600 mt-2">0</p>
-          <p class="text-xs text-slate-500 mt-1">Terdaftar dalam database</p>
-        </div>
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sedang Dipinjam</p>
-          <p id="statActiveLoans" class="text-3xl font-bold text-amber-600 mt-2">0</p>
-          <p class="text-xs text-slate-500 mt-1">Transaksi aktif berjalan</p>
-        </div>
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Denda</p>
-          <p id="statFines" class="text-3xl font-bold text-emerald-600 mt-2">Rp 0</p>
-          <p class="text-xs text-slate-500 mt-1">Tarif: Rp 1.000 / hari terlambat</p>
-        </div>
-      </div>
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <h3 class="text-base font-bold text-slate-900 mb-3">Aktivitas Sirkulasi Terbaru</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
-                <th class="py-2.5 pr-4">Kode</th>
-                <th class="py-2.5 px-4">Anggota</th>
-                <th class="py-2.5 px-4">Koleksi</th>
-                <th class="py-2.5 px-4">Tgl Pinjam</th>
-                <th class="py-2.5 px-4">Jatuh Tempo</th>
-                <th class="py-2.5 pl-4">Status &amp; Denda</th>
-              </tr>
-            </thead>
-            <tbody id="dashboardRecentLoans" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Bibliography -->
-    <section id="section-bibliography" class="tab-section hidden space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900">Manajemen Bibliografi &amp; Katalog</h2>
-            <p class="text-sm text-slate-500 mt-1">Kelola data koleksi ebook serta cetak label nomor panggil dan barcode.</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="printAllBarcodes()" class="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium transition cursor-pointer">🖨️ Cetak Semua Barcode</button>
-            <button onclick="openBookModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition shadow-sm cursor-pointer">+ Tambah Bibliografi</button>
-          </div>
-        </div>
-        <div class="mb-4">
-          <input id="bibSearch" oninput="renderBibliography()" type="text" placeholder="Cari judul, pengarang, ISBN, no. panggil, file ebook..." class="w-full sm:w-96 px-3.5 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 uppercase">
-                <th class="py-3 px-3">No. Panggil</th>
-                <th class="py-3 px-3">Judul &amp; Subjek</th>
-                <th class="py-3 px-3">Pengarang</th>
-                <th class="py-3 px-3">Penerbit / Tahun</th>
-                <th class="py-3 px-3">File Ebook</th>
-                <th class="py-3 px-3 text-center">Stok</th>
-                <th class="py-3 px-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="bibliographyTableBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Members -->
-    <section id="section-members" class="tab-section hidden space-y-6">
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900">Manajemen Keanggotaan</h2>
-            <p class="text-sm text-slate-500 mt-1">Kelola data anggota dan cetak kartu anggota dengan barcode.</p>
-          </div>
-          <button onclick="openMemberModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition shadow-sm cursor-pointer">+ Tambah Anggota</button>
-        </div>
-        <div class="mb-4">
-          <input id="memberSearch" oninput="renderMembers()" type="text" placeholder="Cari ID anggota, nama, prodi, email..." class="w-full sm:w-96 px-3.5 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 uppercase">
-                <th class="py-3 px-3">ID Anggota</th>
-                <th class="py-3 px-3">Nama Lengkap</th>
-                <th class="py-3 px-3">Prodi / Unit</th>
-                <th class="py-3 px-3">Kontak</th>
-                <th class="py-3 px-3">Status</th>
-                <th class="py-3 px-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="membersTableBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Circulation -->
-    <section id="section-circulation" class="tab-section hidden space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
-          <h2 class="text-lg font-bold text-slate-900 mb-1">Form Peminjaman Koleksi</h2>
-          <p class="text-xs text-slate-500 mb-4">Stok buku otomatis berkurang 1 saat transaksi disimpan.</p>
-          <form onsubmit="handleBorrowSubmit(event)" class="space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pilih Anggota</label>
-              <select id="loanMemberId" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white"></select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pilih Koleksi (Stok Tersedia)</label>
-              <select id="loanBookId" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white"></select>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tanggal Pinjam</label>
-                <input id="loanBorrowDate" type="date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Jatuh Tempo</label>
-                <input id="loanDueDate" type="date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-              </div>
-            </div>
-            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">
-              <span class="font-semibold text-slate-800">Ketentuan Denda:</span> Rp 1.000 per hari keterlambatan.
-            </div>
-            <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition shadow-sm cursor-pointer">Proses Peminjaman</button>
-          </form>
-        </div>
-        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">Daftar Transaksi &amp; Pengembalian</h2>
-              <p class="text-xs text-slate-500">Kembalikan buku untuk menambah stok dan menghitung denda.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <label class="text-xs font-medium text-slate-600">Simulasi Tgl Kembali:</label>
-              <input id="simReturnDate" onchange="renderCirculation()" type="date" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs outline-none" />
-            </div>
-          </div>
-          <div id="circulationList" class="space-y-3"></div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 no-print">
-    LibraSys — Aplikasi Otomasi Perpustakaan • Data tersimpan di <code class="text-slate-700">localStorage</code>
-  </footer>
-
-  <!-- Login Modal -->
-  <div id="loginModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-slate-900">Login Petugas</h3>
-        <button onclick="closeModal('loginModal')" class="text-slate-400 hover:text-slate-600 text-xl leading-none cursor-pointer">&times;</button>
-      </div>
-      <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Username</label>
-          <input id="loginUsername" type="text" required placeholder="admin" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
-          <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none" />
-        </div>
-        <div class="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">Akun bawaan: <span class="font-semibold">admin</span> / <span class="font-semibold">admin123</span></div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('loginModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">Batal</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium cursor-pointer">Masuk</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Account Modal -->
-  <div id="accountModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-6">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <div>
-          <h3 class="text-lg font-bold text-slate-900">Pengaturan Akun Petugas</h3>
-          <p class="text-xs text-slate-500">Login sebagai: <span id="currentUserLabel" class="font-semibold text-indigo-600">-</span></p>
-        </div>
-        <button onclick="closeModal('accountModal')" class="text-slate-400 hover:text-slate-600 text-xl leading-none cursor-pointer">&times;</button>
-      </div>
-      <form onsubmit="handleChangePassword(event)" class="space-y-3">
-        <h4 class="text-sm font-bold text-slate-800">Ganti Password</h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Password Lama</label>
-            <input id="oldPasswordInput" type="password" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Password Baru</label>
-            <input id="newPasswordInput" type="password" required minlength="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-        </div>
-        <button type="submit" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold cursor-pointer">Simpan Password Baru</button>
-      </form>
-      <hr class="border-slate-100" />
-      <form onsubmit="handleAddUser(event)" class="space-y-3">
-        <h4 class="text-sm font-bold text-slate-800">Tambah Username Petugas</h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Username Baru</label>
-            <input id="newUsernameInput" type="text" required placeholder="pustakawan2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Password Awal</label>
-            <input id="newUserPassInput" type="password" required minlength="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-        </div>
-        <div class="flex items-center justify-between pt-1">
-          <span class="text-xs text-slate-500">User: <span id="userListPreview" class="font-medium text-slate-700"></span></span>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer">+ Tambah User</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Book Modal -->
-  <div id="bookModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-4">
-        <h3 id="bookModalTitle" class="text-lg font-bold text-slate-900">Tambah Bibliografi</h3>
-        <button onclick="closeModal('bookModal')" class="text-slate-400 hover:text-slate-600 text-xl leading-none cursor-pointer">&times;</button>
-      </div>
-      <form onsubmit="handleBookSubmit(event)" class="space-y-4">
-        <input type="hidden" id="bookEditId" />
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Judul Koleksi</label>
-            <input id="bookTitle" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pengarang</label>
-            <input id="bookAuthor" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Penerbit</label>
-            <input id="bookPublisher" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tahun</label>
-            <input id="bookYear" type="number" required min="1900" max="2099" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Stok</label>
-            <input id="bookStock" type="number" required min="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ISBN</label>
-            <input id="bookIsbn" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">No. Panggil</label>
-            <input id="bookCallNumber" type="text" required placeholder="813 PEN a" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kategori</label>
-            <select id="bookCategory" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none bg-white">
-              <option value="Fiksi & Novel">Fiksi &amp; Novel</option>
-              <option value="Religi & Spiritual">Religi &amp; Spiritual</option>
-              <option value="Ilmu Perpustakaan & Kearsipan">Ilmu Perpustakaan &amp; Kearsipan</option>
-              <option value="Teknologi Informasi">Teknologi Informasi</option>
-              <option value="Filsafat & Sastra">Filsafat &amp; Sastra</option>
-              <option value="Manajemen & Sosial">Manajemen &amp; Sosial</option>
-              <option value="Sains & Metode Riset">Sains &amp; Metode Riset</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama File Ebook (PDF)</label>
-          <input id="bookFileName" type="text" placeholder="Dilan.pdf" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none font-mono" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ringkasan</label>
-          <textarea id="bookSummary" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" placeholder="Deskripsi singkat..."></textarea>
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('bookModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">Batal</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium cursor-pointer">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Member Modal -->
-  <div id="memberModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200">
-      <div class="flex items-center justify-between mb-4">
-        <h3 id="memberModalTitle" class="text-lg font-bold text-slate-900">Tambah Anggota</h3>
-        <button onclick="closeModal('memberModal')" class="text-slate-400 hover:text-slate-600 text-xl leading-none cursor-pointer">&times;</button>
-      </div>
-      <form onsubmit="handleMemberSubmit(event)" class="space-y-4">
-        <input type="hidden" id="memberEditId" />
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ID Anggota</label>
-            <input id="memberCode" type="text" required placeholder="AGT-2026-004" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Status</label>
-            <select id="memberStatus" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none bg-white">
-              <option value="Aktif">Aktif</option>
-              <option value="Non-Aktif">Non-Aktif</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Lengkap</label>
-          <input id="memberName" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Prodi / Unit</label>
-            <input id="memberDept" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email / HP</label>
-            <input id="memberContact" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('memberModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">Batal</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium cursor-pointer">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Print Modal -->
-  <div id="printModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-        <h3 id="printModalTitle" class="text-lg font-bold text-slate-900">Pratinjau Cetak</h3>
-        <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium cursor-pointer">🖨️ Cetak</button>
-          <button onclick="closeModal('printModal')" class="px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">Tutup</button>
-        </div>
-      </div>
-      <div id="printArea" class="bg-white rounded-xl border border-dashed border-slate-300 p-4"></div>
-    </div>
-  </div>
-
-  <script>
-    const STORAGE_KEY = 'librasys_ebook_db_v2';
-    const FINE_PER_DAY = 1000;
-
-    function getTodayISO(offsetDays = 0) {
-      const d = new Date();
-      d.setDate(d.getDate() + offsetDays);
+    const STORAGE_KEY = 'librasys_ebook_db_final';
+    
+    function getTodayISO(offset = 0) {
+      const d = new Date(); d.setDate(d.getDate() + offset);
       return d.toISOString().split('T')[0];
     }
 
     function createInitialDB() {
       return {
-        currentUser: null,
-        activeTab: 'opac',
+        currentUser: null, activeTab: 'opac',
         users: [{ username: 'admin', passwordHash: btoa('admin123') }],
         books: [
-          {
-            id: 'BK-101',
-            title: 'Ada Cinta di SMA CJR',
-            author: 'CJR (penulis)',
-            publisher: 'Ebook Digital',
-            year: 2024,
-            isbn: '978-602-0001-01-1',
-            callNumber: '813 CJR a',
-            category: 'Fiksi & Novel',
-            fileName: 'Ada_Cinta_di_SMA_CJR.pdf',
-            stock: 3,
-            summary: 'Novel remaja bertema cinta dan persahabatan di bangku SMA.'
-          },
-          {
-            id: 'BK-102',
-            title: 'Ayat-Ayat Api',
-            author: 'Penulis Ebook',
-            publisher: 'Ebook Digital',
-            year: 2024,
-            isbn: '978-602-0001-02-8',
-            callNumber: '813 AYA a',
-            category: 'Fiksi & Novel',
-            fileName: 'Ayat_ayat_api.pdf',
-            stock: 2,
-            summary: 'Kumpulan kisah penuh makna tentang perjuangan dan semangat.'
-          },
-          {
-            id: 'BK-103',
-            title: 'Bahagia Kenapa Tidak',
-            author: 'Penulis Ebook',
-            publisher: 'Ebook Digital',
-            year: 2024,
-            isbn: '978-602-0001-03-5',
-            callNumber: '158.1 BAH b',
-            category: 'Manajemen & Sosial',
-            fileName: 'Bahagia_kenapa_tidak.pdf',
-            stock: 4,
-            summary: 'Buku pengembangan diri tentang meraih kebahagiaan sederhana.'
-          },
-          {
-            id: 'BK-104',
-            title: 'Buku Islam Agamaku',
-            author: 'Penulis Ebook',
-            publisher: 'Ebook Digital',
-            year: 2024,
-            isbn: '978-602-0001-04-2',
-            callNumber: '297 BUK b',
-            category: 'Religi & Spiritual',
-            fileName: 'Buku_islam_agamaku.pdf',
-            stock: 5,
-            summary: 'Panduan dasar ajaran Islam untuk pembaca umum.'
-          },
-          {
-            id: 'BK-105',
-            title: 'Bumi Tere Liye',
-            author: 'Tere Liye',
-            publisher: 'Ebook Digital',
-            year: 2024,
-            isbn: '978-602-0001-05-9',
-            callNumber: '813 TER b',
-            category: 'Fiksi & Novel',
-            fileName: 'Bumi_Tere_liye.pdf',
-            stock: 3,
-            summary: 'Petualangan dunia paralel karya Tere Liye.'
-          },
-          {
-            id: 'BK-106',
-            title: 'Dilan',
-            author: 'Pidi Baiq',
-            publisher: 'Ebook Digital',
-            year: 2024,
-            isbn: '978-602-0001-06-6',
-            callNumber: '813 PID d',
-            category: 'Fiksi & Novel',
-            fileName: 'Dilan.pdf',
-            stock: 4,
-            summary: 'Kisah cinta Dilan dan Milea di Bandung tahun 1990-an.'
-          }
+          { id: 'BK-101', title: 'Ada Cinta di SMA CJR', author: 'CJR', category: 'Fiksi & Novel', fileName: 'Ada_Cinta_di_SMA_CJR.pdf', stock: 3, callNumber: '813 CJR a', isbn: '111' },
+          { id: 'BK-102', title: 'Ayat-Ayat Api', author: 'Penulis', category: 'Fiksi & Novel', fileName: 'Ayat_ayat_api.pdf', stock: 2, callNumber: '813 AYA a', isbn: '222' },
+          { id: 'BK-103', title: 'Bahagia Kenapa Tidak', author: 'Penulis', category: 'Manajemen & Sosial', fileName: 'Bahagia_kenapa_tidak.pdf', stock: 4, callNumber: '158 BAH b', isbn: '333' },
+          { id: 'BK-104', title: 'Buku Islam Agamaku', author: 'Penulis', category: 'Religi & Spiritual', fileName: 'Buku_islam_agamaku.pdf', stock: 5, callNumber: '297 BUK b', isbn: '444' },
+          { id: 'BK-105', title: 'Bumi Tere Liye', author: 'Tere Liye', category: 'Fiksi & Novel', fileName: 'Bumi_Tere_liye.pdf', stock: 3, callNumber: '813 TER b', isbn: '555' },
+          { id: 'BK-106', title: 'Dilan', author: 'Pidi Baiq', category: 'Fiksi & Novel', fileName: 'Dilan.pdf', stock: 4, callNumber: '813 PID d', isbn: '666' }
         ],
         members: [
-          { id: 'MBR-1', code: 'AGT-2026-001', name: 'Nadia Pramesti', dept: 'Ilmu Perpustakaan', contact: 'nadia.p@mail.id', status: 'Aktif' },
-          { id: 'MBR-2', code: 'AGT-2026-002', name: 'Dimas Aditya', dept: 'Sastra Indonesia', contact: '0812-3456-7890', status: 'Aktif' },
-          { id: 'MBR-3', code: 'AGT-2026-003', name: 'Clarissa Putri', dept: 'Sejarah', contact: 'clarissa.putri@mail.id', status: 'Aktif' }
+          { id: 'MBR-1', code: 'AGT-01', name: 'Nadia', dept: 'Ilmu Perpustakaan', contact: 'nadia@mail.id', status: 'Aktif' },
+          { id: 'MBR-2', code: 'AGT-02', name: 'Dimas', dept: 'Sastra', contact: 'dimas@mail.id', status: 'Aktif' }
         ],
         loans: [
-          { id: 'TRX-001', memberId: 'MBR-1', bookId: 'BK-105', borrowDate: getTodayISO(-12), dueDate: getTodayISO(-5), returnDate: null, fine: 0, status: 'Dipinjam' },
-          { id: 'TRX-002', memberId: 'MBR-2', bookId: 'BK-101', borrowDate: getTodayISO(-3), dueDate: getTodayISO(4), returnDate: null, fine: 0, status: 'Dipinjam' },
-          { id: 'TRX-003', memberId: 'MBR-3', bookId: 'BK-103', borrowDate: getTodayISO(-14), dueDate: getTodayISO(-7), returnDate: getTodayISO(-4), fine: 3000, status: 'Dikembalikan' }
+          { id: 'TRX-001', memberId: 'MBR-1', bookId: 'BK-105', borrowDate: getTodayISO(-5), dueDate: getTodayISO(2), returnDate: null, fine: 0, status: 'Dipinjam' }
         ]
       };
     }
 
     let db = loadDB();
-
     function loadDB() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          const fresh = createInitialDB();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-          return fresh;
-        }
-        return JSON.parse(raw);
-      } catch (e) {
-        return createInitialDB();
-      }
+        if (raw) return JSON.parse(raw);
+      } catch(e) {}
+      const fresh = createInitialDB();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+      return fresh;
     }
-
     function saveDB() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
-
-    function resetDemoData() {
-      if (!confirm('Kembalikan seluruh data ke kondisi awal demo?')) return;
-      db = createInitialDB();
-      saveDB();
-      showToast('Data demo berhasil direset.');
-      renderAll();
-      switchTab('opac');
-    }
-
-    function showToast(message, isError = false) {
-      const toast = document.getElementById('toast');
-      const icon = document.getElementById('toastIcon');
-      const text = document.getElementById('toastMessage');
-      icon.textContent = isError ? '!' : '✓';
-      icon.className = isError ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold';
-      text.textContent = message;
-      toast.classList.remove('hidden');
-      clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
-    }
-
-    function escapeHTML(str = '') {
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function formatRupiah(num) { return 'Rp ' + Number(num || 0).toLocaleString('id-ID'); }
-
-    function diffDays(dueISO, currentISO) {
-      const due = new Date(dueISO + 'T00:00:00');
-      const cur = new Date(currentISO + 'T00:00:00');
-      const diff = Math.floor((cur - due) / (1000 * 60 * 60 * 24));
-      return diff > 0 ? diff : 0;
-    }
-
-    function requireStaff() {
-      if (!db.currentUser) {
-        showToast('Silakan login sebagai petugas terlebih dahulu.', true);
-        openLoginModal();
-        return false;
-      }
-      return true;
-    }
+    function resetDemoData() { if(confirm('Reset data?')) { db = createInitialDB(); saveDB(); renderAll(); switchTab('opac'); } }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function showToast(msg, err=false) { alert(msg); }
+    function escapeHTML(str='') { return String(str).replace(/</g,'&lt;'); }
+    function formatRupiah(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+    function diffDays(d1, d2) { return Math.max(0, Math.floor((new Date(d2) - new Date(d1)) / 864e5)); }
+    function requireStaff() { if(!db.currentUser) { openLoginModal(); return false; } return true; }
 
     // AUTH
-    function openLoginModal() {
-      document.getElementById('loginUsername').value = '';
-      document.getElementById('loginPassword').value = '';
-      document.getElementById('loginModal').classList.remove('hidden');
-    }
-
+    function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
     function handleLoginSubmit(e) {
       e.preventDefault();
-      const u = document.getElementById('loginUsername').value.trim();
+      const u = document.getElementById('loginUsername').value;
       const p = document.getElementById('loginPassword').value;
-      const found = db.users.find(item => item.username === u && item.passwordHash === btoa(p));
-      if (!found) { showToast('Username atau password salah!', true); return; }
-      db.currentUser = found.username;
-      saveDB();
-      closeModal('loginModal');
-      showToast(`Selamat datang, ${found.username}!`);
-      renderAuthUI();
-      renderAll();
+      if(db.users.find(x => x.username === u && x.passwordHash === btoa(p))) {
+        db.currentUser = u; saveDB(); closeModal('loginModal'); renderAuthUI(); renderAll();
+      } else { showToast('Login gagal', true); }
     }
-
-    function logoutUser() {
-      db.currentUser = null;
-      if (['dashboard', 'bibliography', 'members', 'circulation'].includes(db.activeTab)) db.activeTab = 'opac';
-      saveDB();
-      showToast('Anda telah logout.');
-      renderAuthUI();
-      switchTab(db.activeTab);
-    }
-
-    function openAccountModal() {
-      if (!requireStaff()) return;
-      document.getElementById('currentUserLabel').textContent = db.currentUser;
-      document.getElementById('oldPasswordInput').value = '';
-      document.getElementById('newPasswordInput').value = '';
-      document.getElementById('newUsernameInput').value = '';
-      document.getElementById('newUserPassInput').value = '';
-      document.getElementById('userListPreview').textContent = db.users.map(u => u.username).join(', ');
-      document.getElementById('accountModal').classList.remove('hidden');
-    }
-
-    function handleChangePassword(e) {
-      e.preventDefault();
-      if (!requireStaff()) return;
-      const oldPass = document.getElementById('oldPasswordInput').value;
-      const newPass = document.getElementById('newPasswordInput').value;
-      const userObj = db.users.find(u => u.username === db.currentUser);
-      if (!userObj || userObj.passwordHash !== btoa(oldPass)) { showToast('Password lama tidak sesuai!', true); return; }
-      userObj.passwordHash = btoa(newPass);
-      saveDB();
-      document.getElementById('oldPasswordInput').value = '';
-      document.getElementById('newPasswordInput').value = '';
-      showToast('Password berhasil diperbarui!');
-    }
-
-    function handleAddUser(e) {
-      e.preventDefault();
-      if (!requireStaff()) return;
-      const newUser = document.getElementById('newUsernameInput').value.trim();
-      const newPass = document.getElementById('newUserPassInput').value;
-      if (!newUser) return;
-      if (db.users.some(u => u.username.toLowerCase() === newUser.toLowerCase())) { showToast('Username sudah terdaftar!', true); return; }
-      db.users.push({ username: newUser, passwordHash: btoa(newPass) });
-      saveDB();
-      document.getElementById('newUsernameInput').value = '';
-      document.getElementById('newUserPassInput').value = '';
-      document.getElementById('userListPreview').textContent = db.users.map(u => u.username).join(', ');
-      showToast(`Username "${newUser}" ditambahkan!`);
-    }
+    function logoutUser() { db.currentUser = null; saveDB(); renderAuthUI(); switchTab('opac'); }
+    function openAccountModal() { alert('Fitur pengaturan akun disederhanakan di versi ini.'); }
 
     function renderAuthUI() {
-      const badgeText = document.getElementById('authStatusText');
-      const dot = document.getElementById('authDot');
-      const btnLogin = document.getElementById('btnOpenLogin');
-      const loggedControls = document.getElementById('loggedInControls');
-      const roleBanner = document.getElementById('roleBanner');
-
-      if (db.currentUser) {
-        badgeText.textContent = `Petugas: ${db.currentUser}`;
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-        btnLogin.classList.add('hidden');
-        loggedControls.classList.remove('hidden');
-        loggedControls.classList.add('flex');
-        roleBanner.innerHTML = `
-          <div><span class="font-semibold">Mode Petugas Aktif (${escapeHTML(db.currentUser)}):</span> Akses penuh ke Bibliografi, Keanggotaan, Sirkulasi &amp; Denda.</div>
-          <button onclick="openAccountModal()" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">Kelola User &amp; Sandi</button>
-        `;
-      } else {
-        badgeText.textContent = 'Mode Pengunjung (OPAC)';
-        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
-        btnLogin.classList.remove('hidden');
-        loggedControls.classList.add('hidden');
-        loggedControls.classList.remove('flex');
-        roleBanner.innerHTML = `
-          <div>
-            <span class="font-semibold">Akses Publik OPAC Aktif:</span> Cari koleksi ebook. Untuk mengelola data, <button onclick="openLoginModal()" class="underline font-semibold hover:text-indigo-700 cursor-pointer">Login Petugas</button> (Default: <code class="bg-indigo-100 px-1.5 py-0.5 rounded">admin</code> / <code class="bg-indigo-100 px-1.5 py-0.5 rounded">admin123</code>).
-          </div>
-        `;
-      }
+      const isLogged = !!db.currentUser;
+      document.getElementById('btnOpenLogin').classList.toggle('hidden', isLogged);
+      document.getElementById('loggedInControls').classList.toggle('hidden', !isLogged);
+      document.getElementById('loggedInControls').classList.toggle('flex', isLogged);
+      document.getElementById('authStatusText').textContent = isLogged ? 'Petugas: ' + db.currentUser : 'Mode Pengunjung';
     }
 
     // NAV
-    function switchTab(tabName) {
-      const staffTabs = ['dashboard', 'bibliography', 'members', 'circulation'];
-      if (staffTabs.includes(tabName) && !db.currentUser) {
-        showToast('Halaman khusus petugas. Silakan login terlebih dahulu.', true);
-        openLoginModal();
-        return;
-      }
-      db.activeTab = tabName;
-      saveDB();
-      document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
-      const target = document.getElementById(`section-${tabName}`);
-      if (target) target.classList.remove('hidden');
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        const isActive = btn.dataset.tab === tabName;
-        btn.className = isActive
-          ? 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer bg-indigo-600 text-white'
-          : 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70';
+    function switchTab(tab) {
+      if(['dashboard','bibliography','members','circulation'].includes(tab) && !db.currentUser) { openLoginModal(); return; }
+      db.activeTab = tab; saveDB();
+      document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+      document.getElementById('section-' + tab).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        const active = b.dataset.tab === tab;
+        b.className = active ? 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap bg-indigo-600 text-white' : 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap text-slate-600 hover:bg-slate-200/70';
       });
-      if (tabName === 'opac') renderOPAC();
-      if (tabName === 'dashboard') renderDashboard();
-      if (tabName === 'bibliography') renderBibliography();
-      if (tabName === 'members') renderMembers();
-      if (tabName === 'circulation') renderCirculation();
+      if(tab==='opac') renderOPAC();
+      if(tab==='dashboard') renderDashboard();
+      if(tab==='bibliography') renderBibliography();
+      if(tab==='members') renderMembers();
+      if(tab==='circulation') renderCirculation();
     }
-
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
     // OPAC
-    function resetOPACFilters() {
-      document.getElementById('opacQuery').value = '';
-      document.getElementById('opacField').value = 'all';
-      document.getElementById('opacCategory').value = 'all';
-      document.getElementById('opacYear').value = '';
-      document.getElementById('opacAvailability').value = 'all';
-      renderOPAC();
-    }
-
+    function resetOPACFilters() { document.getElementById('opacQuery').value=''; document.getElementById('opacCategory').value='all'; renderOPAC(); }
     function renderOPAC() {
-      const q = (document.getElementById('opacQuery').value || '').trim().toLowerCase();
-      const field = document.getElementById('opacField').value;
-      const category = document.getElementById('opacCategory').value;
-      const year = (document.getElementById('opacYear').value || '').trim();
-      const avail = document.getElementById('opacAvailability').value;
-
-      const filtered = db.books.filter(book => {
-        if (category !== 'all' && book.category !== category) return false;
-        if (year && String(book.year) !== year) return false;
-        if (avail === 'available' && book.stock <= 0) return false;
-        if (avail === 'unavailable' && book.stock > 0) return false;
-        if (!q) return true;
-        if (field === 'all') {
-          return [book.title, book.author, book.isbn, book.publisher, book.callNumber, book.category, book.fileName]
-            .some(val => String(val || '').toLowerCase().includes(q));
-        }
-        return String(book[field] || '').toLowerCase().includes(q);
-      });
-
-      document.getElementById('opacResultCount').textContent = `Menampilkan ${filtered.length} dari ${db.books.length} koleksi`;
-      const container = document.getElementById('opacResults');
-
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-10 text-center">
-            <p class="text-slate-600 font-medium">Tidak ada koleksi yang cocok.</p>
-            <button onclick="resetOPACFilters()" class="mt-3 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 cursor-pointer">Reset Pencarian</button>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = filtered.map(book => {
-        const isAvailable = book.stock > 0;
-        return `
-          <div class="book-card bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between gap-2 mb-2">
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">${escapeHTML(book.category)}</span>
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                  ${isAvailable ? `Tersedia (${book.stock})` : 'Stok Habis'}
-                </span>
-              </div>
-              <h3 class="font-bold text-slate-900 text-base leading-snug mt-2 line-clamp-2">${escapeHTML(book.title)}</h3>
-              <p class="text-sm text-slate-600 mt-1">${escapeHTML(book.author)} • <span class="text-slate-500">${escapeHTML(book.year)}</span></p>
-              <p class="text-xs text-slate-500 mt-2 line-clamp-2">${escapeHTML(book.summary || 'Tidak ada ringkasan.')}</p>
-              <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
-                <span class="font-semibold text-slate-700">📄 File:</span>
-                <code class="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-[11px]">${escapeHTML(book.fileName || '-')}</code>
-              </div>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-500">
-              <div><span class="font-semibold text-slate-700">No. Panggil:</span> <code class="bg-slate-100 px-1.5 py-0.5 rounded">${escapeHTML(book.callNumber)}</code></div>
-              <div><span class="font-semibold text-slate-700">ISBN:</span> ${escapeHTML(book.isbn)}</div>
-            </div>
-          </div>`;
-      }).join('');
+      const q = (document.getElementById('opacQuery').value || '').toLowerCase();
+      const cat = document.getElementById('opacCategory').value;
+      const filtered = db.books.filter(b => (cat==='all' || b.category===cat) && (!q || b.title.toLowerCase().includes(q)));
+      document.getElementById('opacResultCount').textContent = `Menampilkan ${filtered.length} koleksi`;
+      
+      document.getElementById('opacResults').innerHTML = filtered.map(b => `
+        <div class="book-card bg-white rounded-2xl border p-5 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">${b.category}</span>
+            <h3 class="font-bold text-slate-900 text-base mt-3 line-clamp-2">${b.title}</h3>
+            <p class="text-sm text-slate-600 mt-1">${b.author}</p>
+            <div class="mt-2 text-xs font-mono bg-slate-100 p-1 rounded truncate">📄 ${b.fileName}</div>
+          </div>
+          <div class="mt-4 pt-3 border-t flex flex-col gap-2">
+            <a href="ebook/${b.fileName}" target="_blank" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-center rounded-lg text-sm font-medium">📖 Baca Ebook</a>
+          </div>
+        </div>
+      `).join('');
     }
 
     // DASHBOARD
     function renderDashboard() {
-      const totalCopies = db.books.reduce((acc, b) => acc + Number(b.stock || 0), 0);
-      const activeLoans = db.loans.filter(l => l.status === 'Dipinjam').length;
-      const totalFines = db.loans.reduce((acc, l) => acc + Number(l.fine || 0), 0);
-
       document.getElementById('statTitles').textContent = db.books.length;
-      document.getElementById('statCopies').textContent = totalCopies;
       document.getElementById('statMembers').textContent = db.members.length;
-      document.getElementById('statActiveLoans').textContent = activeLoans;
-      document.getElementById('statFines').textContent = formatRupiah(totalFines);
-
-      const tbody = document.getElementById('dashboardRecentLoans');
-      tbody.innerHTML = db.loans.slice().reverse().slice(0, 6).map(loan => {
-        const m = db.members.find(x => x.id === loan.memberId);
-        const b = db.books.find(x => x.id === loan.bookId);
-        return `
-          <tr>
-            <td class="py-2.5 pr-4 font-mono text-xs font-semibold">${escapeHTML(loan.id)}</td>
-            <td class="py-2.5 px-4">${escapeHTML(m ? m.name : 'Anggota Dihapus')}</td>
-            <td class="py-2.5 px-4 font-medium text-slate-800">${escapeHTML(b ? b.title : 'Buku Dihapus')}</td>
-            <td class="py-2.5 px-4 text-xs text-slate-500">${escapeHTML(loan.borrowDate)}</td>
-            <td class="py-2.5 px-4 text-xs text-slate-500">${escapeHTML(loan.dueDate)}</td>
-            <td class="py-2.5 pl-4">
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${loan.status === 'Dipinjam' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}">${loan.status}</span>
-              ${loan.fine > 0 ? `<span class="ml-1 text-xs font-semibold text-rose-600">(${formatRupiah(loan.fine)})</span>` : ''}
-            </td>
-          </tr>`;
+      document.getElementById('statActiveLoans').textContent = db.loans.filter(l=>l.status==='Dipinjam').length;
+      document.getElementById('dashboardRecentLoans').innerHTML = db.loans.map(l => {
+        const b = db.books.find(x=>x.id===l.bookId);
+        const m = db.members.find(x=>x.id===l.memberId);
+        return `<tr><td class="py-2">${l.id}</td><td>${m?m.name:'-'}</td><td>${b?b.title:'-'}</td><td>${l.status}</td></tr>`;
       }).join('');
     }
 
     // BIBLIOGRAPHY
-    function openBookModal(bookId = null) {
-      if (!requireStaff()) return;
-      document.getElementById('bookEditId').value = '';
-      document.getElementById('bookModalTitle').textContent = 'Tambah Bibliografi';
-      document.getElementById('bookTitle').value = '';
-      document.getElementById('bookAuthor').value = '';
-      document.getElementById('bookPublisher').value = 'Ebook Digital';
-      document.getElementById('bookYear').value = '2024';
-      document.getElementById('bookStock').value = '3';
-      document.getElementById('bookIsbn').value = '';
-      document.getElementById('bookCallNumber').value = '';
-      document.getElementById('bookCategory').value = 'Fiksi & Novel';
-      document.getElementById('bookFileName').value = '';
-      document.getElementById('bookSummary').value = '';
-
-      if (bookId) {
-        const book = db.books.find(b => b.id === bookId);
-        if (!book) return;
-        document.getElementById('bookModalTitle').textContent = 'Edit Bibliografi';
-        document.getElementById('bookEditId').value = book.id;
-        document.getElementById('bookTitle').value = book.title;
-        document.getElementById('bookAuthor').value = book.author;
-        document.getElementById('bookPublisher').value = book.publisher;
-        document.getElementById('bookYear').value = book.year;
-        document.getElementById('bookStock').value = book.stock;
-        document.getElementById('bookIsbn').value = book.isbn;
-        document.getElementById('bookCallNumber').value = book.callNumber;
-        document.getElementById('bookCategory').value = book.category;
-        document.getElementById('bookFileName').value = book.fileName || '';
-        document.getElementById('bookSummary').value = book.summary || '';
-      }
-      document.getElementById('bookModal').classList.remove('hidden');
-    }
-
+    function openBookModal() { document.getElementById('bookModal').classList.remove('hidden'); }
     function handleBookSubmit(e) {
       e.preventDefault();
-      if (!requireStaff()) return;
-      const editId = document.getElementById('bookEditId').value;
-      const payload = {
-        title: document.getElementById('bookTitle').value.trim(),
-        author: document.getElementById('bookAuthor').value.trim(),
-        publisher: document.getElementById('bookPublisher').value.trim(),
-        year: Number(document.getElementById('bookYear').value),
-        stock: Math.max(0, Number(document.getElementById('bookStock').value)),
-        isbn: document.getElementById('bookIsbn').value.trim(),
-        callNumber: document.getElementById('bookCallNumber').value.trim(),
-        category: document.getElementById('bookCategory').value,
-        fileName: document.getElementById('bookFileName').value.trim(),
-        summary: document.getElementById('bookSummary').value.trim()
+      const newBook = {
+        id: 'BK-' + Date.now(),
+        title: document.getElementById('bookTitle').value,
+        author: document.getElementById('bookAuthor').value,
+        fileName: document.getElementById('bookFileName').value,
+        stock: parseInt(document.getElementById('bookStock').value),
+        category: 'Fiksi & Novel', callNumber: '000', isbn: '000'
       };
-      if (editId) {
-        const idx = db.books.findIndex(b => b.id === editId);
-        if (idx !== -1) { db.books[idx] = { ...db.books[idx], ...payload }; showToast('Bibliografi diperbarui.'); }
-      } else {
-        db.books.push({ id: 'BK-' + Math.floor(100 + Math.random() * 900), ...payload });
-        showToast('Bibliografi baru ditambahkan.');
-      }
-      saveDB();
-      closeModal('bookModal');
-      renderBibliography();
-      renderOPAC();
+      db.books.push(newBook); saveDB(); closeModal('bookModal'); renderBibliography(); renderOPAC();
     }
-
-    function deleteBook(bookId) {
-      if (!requireStaff()) return;
-      if (db.loans.some(l => l.bookId === bookId && l.status === 'Dipinjam')) { showToast('Koleksi sedang dipinjam!', true); return; }
-      if (!confirm('Hapus bibliografi ini?')) return;
-      db.books = db.books.filter(b => b.id !== bookId);
-      saveDB();
-      showToast('Bibliografi dihapus.');
-      renderBibliography();
-      renderOPAC();
-    }
-
     function renderBibliography() {
-      const q = (document.getElementById('bibSearch').value || '').trim().toLowerCase();
-      const list = db.books.filter(b =>
-        !q || [b.title, b.author, b.isbn, b.callNumber, b.publisher, b.fileName].some(v => String(v || '').toLowerCase().includes(q))
-      );
-      const tbody = document.getElementById('bibliographyTableBody');
-      tbody.innerHTML = list.map(book => `
-        <tr class="hover:bg-slate-50/70">
-          <td class="py-3 px-3 font-mono text-xs font-semibold text-slate-800">${escapeHTML(book.callNumber)}</td>
-          <td class="py-3 px-3">
-            <div class="font-semibold text-slate-900">${escapeHTML(book.title)}</div>
-            <div class="text-xs text-indigo-600">${escapeHTML(book.category)}</div>
-          </td>
-          <td class="py-3 px-3 text-slate-700">${escapeHTML(book.author)}</td>
-          <td class="py-3 px-3 text-xs text-slate-600">${escapeHTML(book.publisher)}<br/><span class="text-slate-400">${escapeHTML(book.year)}</span></td>
-          <td class="py-3 px-3">
-            <code class="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded">${escapeHTML(book.fileName || '-')}</code>
-          </td>
-          <td class="py-3 px-3 text-center">
-            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${book.stock > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">${book.stock}</span>
-          </td>
-          <td class="py-3 px-3 text-right whitespace-nowrap space-x-1">
-            <button onclick="printBookLabel('${book.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium cursor-pointer">🏷️ Label</button>
-            <button onclick="openBookModal('${book.id}')" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium cursor-pointer">Edit</button>
-            <button onclick="deleteBook('${book.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium cursor-pointer">Hapus</button>
-          </td>
-        </tr>`).join('');
+      document.getElementById('bibliographyTableBody').innerHTML = db.books.map(b => `
+        <tr><td class="py-2">${b.title}</td><td>${b.fileName}</td><td>${b.stock}</td><td><a href="ebook/${b.fileName}" target="_blank" class="text-indigo-600 underline">Buka</a></td></tr>
+      `).join('');
     }
 
-    function buildLabelCardHTML(book) {
-      return `
-        <div class="border border-slate-800 rounded-lg p-3 bg-white flex flex-col justify-between break-inside-avoid">
-          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1 mb-2 flex justify-between">
-            <span>LIBRASYS EBOOK</span><span>${escapeHTML(book.id)}</span>
-          </div>
-          <div class="font-bold text-xs text-slate-900 line-clamp-1">${escapeHTML(book.title)}</div>
-          <div class="text-[11px] font-mono font-bold text-slate-800 mt-1">CALL: ${escapeHTML(book.callNumber)}</div>
-          <div class="text-[10px] font-mono text-slate-500 mt-0.5">${escapeHTML(book.fileName || '-')}</div>
-          <div class="mt-2 pt-2 border-t border-slate-100">
-            <div class="h-7 w-full barcode-lines"></div>
-            <div class="text-[10px] font-mono text-center tracking-widest mt-1">ISBN ${escapeHTML(book.isbn)}</div>
-          </div>
-        </div>`;
-    }
-
-    function printBookLabel(bookId) {
-      const book = db.books.find(b => b.id === bookId);
-      if (!book) return;
-      document.getElementById('printModalTitle').textContent = 'Cetak Label & Barcode Koleksi';
-      document.getElementById('printArea').innerHTML = `<div class="max-w-xs mx-auto">${buildLabelCardHTML(book)}</div>`;
-      document.getElementById('printModal').classList.remove('hidden');
-    }
-
-    function printAllBarcodes() {
-      document.getElementById('printModalTitle').textContent = 'Cetak Seluruh Label & Barcode';
-      document.getElementById('printArea').innerHTML = `
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">${db.books.map(buildLabelCardHTML).join('')}</div>`;
-      document.getElementById('printModal').classList.remove('hidden');
-    }
-
-    // MEMBERS
-    function openMemberModal(memberId = null) {
-      if (!requireStaff()) return;
-      document.getElementById('memberEditId').value = '';
-      document.getElementById('memberModalTitle').textContent = 'Tambah Anggota';
-      document.getElementById('memberCode').value = `AGT-2026-00${db.members.length + 1}`;
-      document.getElementById('memberName').value = '';
-      document.getElementById('memberDept').value = '';
-      document.getElementById('memberContact').value = '';
-      document.getElementById('memberStatus').value = 'Aktif';
-      if (memberId) {
-        const m = db.members.find(x => x.id === memberId);
-        if (!m) return;
-        document.getElementById('memberModalTitle').textContent = 'Edit Anggota';
-        document.getElementById('memberEditId').value = m.id;
-        document.getElementById('memberCode').value = m.code;
-        document.getElementById('memberName').value = m.name;
-        document.getElementById('memberDept').value = m.dept;
-        document.getElementById('memberContact').value = m.contact;
-        document.getElementById('memberStatus').value = m.status;
-      }
-      document.getElementById('memberModal').classList.remove('hidden');
-    }
-
+    // MEMBERS & CIRCULATION (Simplified)
+    function openMemberModal() { document.getElementById('memberModal').classList.remove('hidden'); }
     function handleMemberSubmit(e) {
       e.preventDefault();
-      if (!requireStaff()) return;
-      const editId = document.getElementById('memberEditId').value;
-      const payload = {
-        code: document.getElementById('memberCode').value.trim(),
-        name: document.getElementById('memberName').value.trim(),
-        dept: document.getElementById('memberDept').value.trim(),
-        contact: document.getElementById('memberContact').value.trim(),
-        status: document.getElementById('memberStatus').value
-      };
-      if (editId) {
-        const idx = db.members.findIndex(m => m.id === editId);
-        if (idx !== -1) { db.members[idx] = { ...db.members[idx], ...payload }; showToast('Data anggota diperbarui.'); }
-      } else {
-        db.members.push({ id: 'MBR-' + Date.now().toString().slice(-4), ...payload });
-        showToast('Anggota baru ditambahkan.');
-      }
-      saveDB();
-      closeModal('memberModal');
-      renderMembers();
+      db.members.push({ id: 'MBR-' + Date.now(), code: document.getElementById('memberCode').value, name: document.getElementById('memberName').value, status: 'Aktif' });
+      saveDB(); closeModal('memberModal'); renderMembers();
     }
-
-    function deleteMember(memberId) {
-      if (!requireStaff()) return;
-      if (db.loans.some(l => l.memberId === memberId && l.status === 'Dipinjam')) { showToast('Anggota masih memiliki pinjaman aktif.', true); return; }
-      if (!confirm('Hapus data anggota ini?')) return;
-      db.members = db.members.filter(m => m.id !== memberId);
-      saveDB();
-      showToast('Data anggota dihapus.');
-      renderMembers();
-    }
-
     function renderMembers() {
-      const q = (document.getElementById('memberSearch').value || '').trim().toLowerCase();
-      const list = db.members.filter(m =>
-        !q || [m.code, m.name, m.dept, m.contact].some(v => String(v || '').toLowerCase().includes(q))
-      );
-      const tbody = document.getElementById('membersTableBody');
-      tbody.innerHTML = list.map(m => `
-        <tr class="hover:bg-slate-50/70">
-          <td class="py-3 px-3 font-mono text-xs font-semibold text-indigo-700">${escapeHTML(m.code)}</td>
-          <td class="py-3 px-3 font-semibold text-slate-900">${escapeHTML(m.name)}</td>
-          <td class="py-3 px-3 text-slate-700">${escapeHTML(m.dept)}</td>
-          <td class="py-3 px-3 text-xs text-slate-600">${escapeHTML(m.contact)}</td>
-          <td class="py-3 px-3">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${m.status === 'Aktif' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${escapeHTML(m.status)}</span>
-          </td>
-          <td class="py-3 px-3 text-right whitespace-nowrap space-x-1">
-            <button onclick="printMemberCard('${m.id}')" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium cursor-pointer">🪪 Kartu</button>
-            <button onclick="openMemberModal('${m.id}')" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium cursor-pointer">Edit</button>
-            <button onclick="deleteMember('${m.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium cursor-pointer">Hapus</button>
-          </td>
-        </tr>`).join('');
+      document.getElementById('membersTableBody').innerHTML = db.members.map(m => `<tr><td class="py-2">${m.code}</td><td>${m.name}</td><td>${m.status}</td></tr>`).join('');
     }
-
-    function printMemberCard(memberId) {
-      const m = db.members.find(x => x.id === memberId);
-      if (!m) return;
-      document.getElementById('printModalTitle').textContent = 'Cetak Kartu Anggota';
-      document.getElementById('printArea').innerHTML = `
-        <div class="max-w-sm mx-auto rounded-2xl overflow-hidden border border-slate-300 shadow-sm bg-white">
-          <div class="bg-indigo-700 text-white px-5 py-3.5 flex items-center justify-between">
-            <div>
-              <div class="text-[10px] uppercase tracking-widest text-indigo-200">Kartu Anggota Resmi</div>
-              <div class="font-bold text-base">LIBRASYS PERPUSTAKAAN</div>
-            </div>
-            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/15">${escapeHTML(m.status)}</span>
-          </div>
-          <div class="p-5 space-y-2">
-            <div class="text-lg font-bold text-slate-900">${escapeHTML(m.name)}</div>
-            <div class="text-xs text-slate-600"><span class="font-semibold">ID Anggota:</span> <span class="font-mono">${escapeHTML(m.code)}</span></div>
-            <div class="text-xs text-slate-600"><span class="font-semibold">Unit / Prodi:</span> ${escapeHTML(m.dept)}</div>
-            <div class="text-xs text-slate-600"><span class="font-semibold">Kontak:</span> ${escapeHTML(m.contact)}</div>
-            <div class="pt-3 mt-2 border-t border-slate-100">
-              <div class="h-7 w-full barcode-lines"></div>
-              <div class="text-[10px] font-mono text-center tracking-widest mt-1">${escapeHTML(m.code)}</div>
-            </div>
-          </div>
-        </div>`;
-      document.getElementById('printModal').classList.remove('hidden');
-    }
-
-    // CIRCULATION
     function renderCirculation() {
-      const today = getTodayISO(0);
-      const dueDefault = getTodayISO(7);
-      const borrowInput = document.getElementById('loanBorrowDate');
-      const dueInput = document.getElementById('loanDueDate');
-      const simInput = document.getElementById('simReturnDate');
-      if (!borrowInput.value) borrowInput.value = today;
-      if (!dueInput.value) dueInput.value = dueDefault;
-      if (!simInput.value) simInput.value = today;
-
-      const memberSelect = document.getElementById('loanMemberId');
-      const activeMembers = db.members.filter(m => m.status === 'Aktif');
-      memberSelect.innerHTML = activeMembers.length
-        ? activeMembers.map(m => `<option value="${m.id}">${escapeHTML(m.code)} — ${escapeHTML(m.name)}</option>`).join('')
-        : `<option value="">Tidak ada anggota aktif</option>`;
-
-      const bookSelect = document.getElementById('loanBookId');
-      const availableBooks = db.books.filter(b => b.stock > 0);
-      bookSelect.innerHTML = availableBooks.length
-        ? availableBooks.map(b => `<option value="${b.id}">${escapeHTML(b.title)} (Stok: ${b.stock})</option>`).join('')
-        : `<option value="">Semua koleksi stok 0</option>`;
-
-      const simDate = simInput.value || today;
-      const listEl = document.getElementById('circulationList');
-      if (db.loans.length === 0) {
-        listEl.innerHTML = `<p class="text-sm text-slate-500 py-6 text-center">Belum ada transaksi sirkulasi.</p>`;
-        return;
-      }
-      listEl.innerHTML = db.loans.slice().reverse().map(loan => {
-        const m = db.members.find(x => x.id === loan.memberId);
-        const b = db.books.find(x => x.id === loan.bookId);
-        const isBorrowed = loan.status === 'Dipinjam';
-        const lateDays = isBorrowed ? diffDays(loan.dueDate, simDate) : diffDays(loan.dueDate, loan.returnDate || loan.dueDate);
-        const estimatedFine = isBorrowed ? lateDays * FINE_PER_DAY : loan.fine;
-        return `
-          <div class="border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isBorrowed && lateDays > 0 ? 'bg-rose-50/40 border-rose-200' : 'bg-slate-50/50'}">
-            <div class="space-y-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-mono text-xs font-bold text-slate-800">${escapeHTML(loan.id)}</span>
-                <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${isBorrowed ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${loan.status}</span>
-                ${lateDays > 0
-                  ? `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">Terlambat ${lateDays} hari • Denda ${formatRupiah(estimatedFine)}</span>`
-                  : `<span class="text-xs text-emerald-700 font-medium">Tidak ada denda</span>`}
-              </div>
-              <div class="font-bold text-sm text-slate-900">${escapeHTML(b ? b.title : 'Koleksi Terhapus')}</div>
-              <div class="text-xs text-slate-600">
-                Peminjam: <span class="font-semibold">${escapeHTML(m ? m.name : 'Anggota Terhapus')}</span> (${escapeHTML(m ? m.code : '-')}) •
-                Pinjam: <span class="font-mono">${escapeHTML(loan.borrowDate)}</span> •
-                Tempo: <span class="font-mono">${escapeHTML(loan.dueDate)}</span>
-                ${loan.returnDate ? `• Kembali: <span class="font-mono">${escapeHTML(loan.returnDate)}</span>` : ''}
-              </div>
-            </div>
-            ${isBorrowed ? `<button onclick="returnLoan('${loan.id}')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold whitespace-nowrap transition cursor-pointer shrink-0">Kembalikan Buku</button>` : ''}
-          </div>`;
+      document.getElementById('loanMemberId').innerHTML = db.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      document.getElementById('loanBookId').innerHTML = db.books.map(b => `<option value="${b.id}">${b.title}</option>`).join('');
+      document.getElementById('circulationList').innerHTML = db.loans.map(l => {
+        const b = db.books.find(x=>x.id===l.bookId);
+        return `<div class="p-2 border rounded">${b?b.title:'-'} - ${l.status}</div>`;
       }).join('');
     }
-
     function handleBorrowSubmit(e) {
       e.preventDefault();
-      if (!requireStaff()) return;
-      const memberId = document.getElementById('loanMemberId').value;
-      const bookId = document.getElementById('loanBookId').value;
-      const borrowDate = document.getElementById('loanBorrowDate').value;
-      const dueDate = document.getElementById('loanDueDate').value;
-      if (!memberId || !bookId) { showToast('Pilih anggota dan koleksi.', true); return; }
-      if (dueDate < borrowDate) { showToast('Jatuh tempo tidak boleh lebih awal dari tanggal pinjam.', true); return; }
-      const book = db.books.find(b => b.id === bookId);
-      if (!book || book.stock <= 0) { showToast('Stok koleksi habis!', true); return; }
-      book.stock -= 1;
-      db.loans.push({
-        id: 'TRX-' + String(db.loans.length + 1).padStart(3, '0'),
-        memberId, bookId, borrowDate, dueDate, returnDate: null, fine: 0, status: 'Dipinjam'
-      });
-      saveDB();
-      showToast(`Peminjaman berhasil! Stok "${book.title}" kini ${book.stock}.`);
-      renderCirculation();
-      renderOPAC();
-      renderBibliography();
+      db.loans.push({ id: 'TRX-'+Date.now(), memberId: document.getElementById('loanMemberId').value, bookId: document.getElementById('loanBookId').value, status: 'Dipinjam' });
+      saveDB(); renderCirculation();
     }
 
-    function returnLoan(loanId) {
-      if (!requireStaff()) return;
-      const loan = db.loans.find(l => l.id === loanId);
-      if (!loan || loan.status !== 'Dipinjam') return;
-      const returnDate = document.getElementById('simReturnDate').value || getTodayISO(0);
-      const lateDays = diffDays(loan.dueDate, returnDate);
-      const fineAmount = lateDays * FINE_PER_DAY;
-      loan.status = 'Dikembalikan';
-      loan.returnDate = returnDate;
-      loan.fine = fineAmount;
-      const book = db.books.find(b => b.id === loan.bookId);
-      if (book) book.stock += 1;
-      saveDB();
-      const msg = lateDays > 0
-        ? `Dikembalikan (${returnDate}). Terlambat ${lateDays} hari, denda ${formatRupiah(fineAmount)}. Stok +1.`
-        : `Dikembalikan tepat waktu (${returnDate}). Tanpa denda. Stok +1.`;
-      showToast(msg);
-      renderCirculation();
-      renderOPAC();
-      renderBibliography();
-    }
-
-    function renderAll() {
-      renderAuthUI();
-      renderOPAC();
-      renderDashboard();
-      renderBibliography();
-      renderMembers();
-      renderCirculation();
-    }
-
+    function renderAll() { renderOPAC(); renderDashboard(); renderBibliography(); renderMembers(); renderCirculation(); }
+    
+    // START
+    renderAuthUI();
     renderAll();
-    switchTab(db.activeTab || 'opac');
+    switchTab('opac');
   </script>
 </body>
 </html>
