@@ -1,174 +1,104 @@
-    const STORAGE_KEY = 'librasys_ebook_db_final';
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LibraSys E-Library</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm border-b p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-indigo-600">📚 LibraSys E-Library</h1>
+    <button onclick="toggleLogin()" id="btnLogin" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">Login Petugas</button>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto p-6 space-y-6">
     
-    function getTodayISO(offset = 0) {
-      const d = new Date(); d.setDate(d.getDate() + offset);
-      return d.toISOString().split('T')[0];
-    }
+    <!-- Form Peminjaman (Hanya muncul jika login) -->
+    <div id="adminPanel" class="hidden bg-white p-6 rounded-xl shadow-sm border">
+      <h2 class="text-lg font-bold mb-4">Panel Petugas (Peminjaman)</h2>
+      <form onsubmit="pinjamBuku(event)" class="flex gap-4">
+        <select id="pilihBuku" class="border p-2 rounded-lg w-full" required>
+          <!-- Opsi buku diisi via JS -->
+        </select>
+        <input type="text" id="namaPeminjam" placeholder="Nama Peminjam" class="border p-2 rounded-lg w-full" required>
+        <button type="submit" class="bg-emerald-600 text-white px-6 py-2 rounded-lg">Pinjam</button>
+      </form>
+      <div id="statusPinjam" class="mt-4 text-sm text-emerald-600 font-bold"></div>
+    </div>
 
-    function createInitialDB() {
-      return {
-        currentUser: null, activeTab: 'opac',
-        users: [{ username: 'admin', passwordHash: btoa('admin123') }],
-        books: [
-          { id: 'BK-101', title: 'Ada Cinta di SMA CJR', author: 'CJR', category: 'Fiksi & Novel', fileName: 'Ada_Cinta_di_SMA_CJR.pdf', stock: 3, callNumber: '813 CJR a', isbn: '111' },
-          { id: 'BK-102', title: 'Ayat-Ayat Api', author: 'Penulis', category: 'Fiksi & Novel', fileName: 'Ayat_ayat_api.pdf', stock: 2, callNumber: '813 AYA a', isbn: '222' },
-          { id: 'BK-103', title: 'Bahagia Kenapa Tidak', author: 'Penulis', category: 'Manajemen & Sosial', fileName: 'Bahagia_kenapa_tidak.pdf', stock: 4, callNumber: '158 BAH b', isbn: '333' },
-          { id: 'BK-104', title: 'Buku Islam Agamaku', author: 'Penulis', category: 'Religi & Spiritual', fileName: 'Buku_islam_agamaku.pdf', stock: 5, callNumber: '297 BUK b', isbn: '444' },
-          { id: 'BK-105', title: 'Bumi Tere Liye', author: 'Tere Liye', category: 'Fiksi & Novel', fileName: 'Bumi_Tere_liye.pdf', stock: 3, callNumber: '813 TER b', isbn: '555' },
-          { id: 'BK-106', title: 'Dilan', author: 'Pidi Baiq', category: 'Fiksi & Novel', fileName: 'Dilan.pdf', stock: 4, callNumber: '813 PID d', isbn: '666' }
-        ],
-        members: [
-          { id: 'MBR-1', code: 'AGT-01', name: 'Nadia', dept: 'Ilmu Perpustakaan', contact: 'nadia@mail.id', status: 'Aktif' },
-          { id: 'MBR-2', code: 'AGT-02', name: 'Dimas', dept: 'Sastra', contact: 'dimas@mail.id', status: 'Aktif' }
-        ],
-        loans: [
-          { id: 'TRX-001', memberId: 'MBR-1', bookId: 'BK-105', borrowDate: getTodayISO(-5), dueDate: getTodayISO(2), returnDate: null, fine: 0, status: 'Dipinjam' }
-        ]
-      };
-    }
+    <!-- Katalog Buku -->
+    <h2 class="text-2xl font-bold">Katalog Buku</h2>
+    <div id="katalog" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- Kartu buku diisi via JS -->
+    </div>
 
-    let db = loadDB();
-    function loadDB() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-      } catch(e) {}
-      const fresh = createInitialDB();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-      return fresh;
-    }
-    function saveDB() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
-    function resetDemoData() { if(confirm('Reset data?')) { db = createInitialDB(); saveDB(); renderAll(); switchTab('opac'); } }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-    function showToast(msg, err=false) { alert(msg); }
-    function escapeHTML(str='') { return String(str).replace(/</g,'&lt;'); }
-    function formatRupiah(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
-    function diffDays(d1, d2) { return Math.max(0, Math.floor((new Date(d2) - new Date(d1)) / 864e5)); }
-    function requireStaff() { if(!db.currentUser) { openLoginModal(); return false; } return true; }
+  </main>
 
-    // AUTH
-    function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
-    function handleLoginSubmit(e) {
-      e.preventDefault();
-      const u = document.getElementById('loginUsername').value;
-      const p = document.getElementById('loginPassword').value;
-      if(db.users.find(x => x.username === u && x.passwordHash === btoa(p))) {
-        db.currentUser = u; saveDB(); closeModal('loginModal'); renderAuthUI(); renderAll();
-      } else { showToast('Login gagal', true); }
-    }
-    function logoutUser() { db.currentUser = null; saveDB(); renderAuthUI(); switchTab('opac'); }
-    function openAccountModal() { alert('Fitur pengaturan akun disederhanakan di versi ini.'); }
+  <script>
+    // Data buku disesuaikan dengan file PDF di folder ebook Anda
+    const daftarBuku = [
+      { judul: "Ada Cinta di SMA CJR", file: "Ada_Cinta_di_SMA_CJR.pdf", warna: "bg-pink-100" },
+      { judul: "Ayat-Ayat Api", file: "Ayat_ayat_api.pdf", warna: "bg-rose-100" },
+      { judul: "Bahagia Kenapa Tidak", file: "Bahagia_kenapa_tidak.pdf", warna: "bg-amber-100" },
+      { judul: "Buku Islam Agamaku", file: "Buku_islam_agamaku.pdf", warna: "bg-emerald-100" },
+      { judul: "Bumi Tere Liye", file: "Bumi_Tere_liye.pdf", warna: "bg-blue-100" },
+      { judul: "Dilan", file: "Dilan.pdf", warna: "bg-indigo-100" }
+    ];
 
-    function renderAuthUI() {
-      const isLogged = !!db.currentUser;
-      document.getElementById('btnOpenLogin').classList.toggle('hidden', isLogged);
-      document.getElementById('loggedInControls').classList.toggle('hidden', !isLogged);
-      document.getElementById('loggedInControls').classList.toggle('flex', isLogged);
-      document.getElementById('authStatusText').textContent = isLogged ? 'Petugas: ' + db.currentUser : 'Mode Pengunjung';
-    }
-
-    // NAV
-    function switchTab(tab) {
-      if(['dashboard','bibliography','members','circulation'].includes(tab) && !db.currentUser) { openLoginModal(); return; }
-      db.activeTab = tab; saveDB();
-      document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
-      document.getElementById('section-' + tab).classList.remove('hidden');
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        const active = b.dataset.tab === tab;
-        b.className = active ? 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap bg-indigo-600 text-white' : 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap text-slate-600 hover:bg-slate-200/70';
-      });
-      if(tab==='opac') renderOPAC();
-      if(tab==='dashboard') renderDashboard();
-      if(tab==='bibliography') renderBibliography();
-      if(tab==='members') renderMembers();
-      if(tab==='circulation') renderCirculation();
-    }
-
-    // OPAC
-    function resetOPACFilters() { document.getElementById('opacQuery').value=''; document.getElementById('opacCategory').value='all'; renderOPAC(); }
-    function renderOPAC() {
-      const q = (document.getElementById('opacQuery').value || '').toLowerCase();
-      const cat = document.getElementById('opacCategory').value;
-      const filtered = db.books.filter(b => (cat==='all' || b.category===cat) && (!q || b.title.toLowerCase().includes(q)));
-      document.getElementById('opacResultCount').textContent = `Menampilkan ${filtered.length} koleksi`;
-      
-      document.getElementById('opacResults').innerHTML = filtered.map(b => `
-        <div class="book-card bg-white rounded-2xl border p-5 flex flex-col justify-between">
-          <div>
-            <span class="text-xs font-semibold px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">${b.category}</span>
-            <h3 class="font-bold text-slate-900 text-base mt-3 line-clamp-2">${b.title}</h3>
-            <p class="text-sm text-slate-600 mt-1">${b.author}</p>
-            <div class="mt-2 text-xs font-mono bg-slate-100 p-1 rounded truncate">📄 ${b.fileName}</div>
+    // Render Katalog
+    const katalog = document.getElementById('katalog');
+    daftarBuku.forEach(buku => {
+      katalog.innerHTML += `
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md transition">
+          <div class="${buku.warna} h-32 rounded-lg mb-3 flex items-center justify-center p-2 text-center">
+            <span class="font-bold text-gray-700">${buku.judul}</span>
           </div>
-          <div class="mt-4 pt-3 border-t flex flex-col gap-2">
-            <a href="ebook/${b.fileName}" target="_blank" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-center rounded-lg text-sm font-medium">📖 Baca Ebook</a>
-          </div>
+          <h3 class="font-bold text-gray-900 line-clamp-2">${buku.judul}</h3>
+          <p class="text-xs text-gray-500 mb-4 truncate">📄 ${buku.file}</p>
+          <a href="ebook/${buku.file}" target="_blank" class="block text-center w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">
+            📖 Baca Ebook
+          </a>
         </div>
-      `).join('');
+      `;
+      
+      // Isi dropdown form peminjaman
+      document.getElementById('pilihBuku').innerHTML += `<option value="${buku.judul}">${buku.judul}</option>`;
+    });
+
+    // Logika Login
+    let isLogin = false;
+    function toggleLogin() {
+      if (!isLogin) {
+        let user = prompt("Masukkan Username (admin):");
+        let pass = prompt("Masukkan Password (admin123):");
+        if (user === "admin" && pass === "admin123") {
+          isLogin = true;
+          document.getElementById('adminPanel').classList.remove('hidden');
+          document.getElementById('btnLogin').innerText = "Logout";
+          document.getElementById('btnLogin').classList.replace('bg-indigo-600', 'bg-red-500');
+        } else {
+          alert("Username atau Password salah!");
+        }
+      } else {
+        isLogin = false;
+        document.getElementById('adminPanel').classList.add('hidden');
+        document.getElementById('btnLogin').innerText = "Login Petugas";
+        document.getElementById('btnLogin').classList.replace('bg-red-500', 'bg-indigo-600');
+      }
     }
 
-    // DASHBOARD
-    function renderDashboard() {
-      document.getElementById('statTitles').textContent = db.books.length;
-      document.getElementById('statMembers').textContent = db.members.length;
-      document.getElementById('statActiveLoans').textContent = db.loans.filter(l=>l.status==='Dipinjam').length;
-      document.getElementById('dashboardRecentLoans').innerHTML = db.loans.map(l => {
-        const b = db.books.find(x=>x.id===l.bookId);
-        const m = db.members.find(x=>x.id===l.memberId);
-        return `<tr><td class="py-2">${l.id}</td><td>${m?m.name:'-'}</td><td>${b?b.title:'-'}</td><td>${l.status}</td></tr>`;
-      }).join('');
-    }
-
-    // BIBLIOGRAPHY
-    function openBookModal() { document.getElementById('bookModal').classList.remove('hidden'); }
-    function handleBookSubmit(e) {
+    // Logika Pinjam Buku
+    function pinjamBuku(e) {
       e.preventDefault();
-      const newBook = {
-        id: 'BK-' + Date.now(),
-        title: document.getElementById('bookTitle').value,
-        author: document.getElementById('bookAuthor').value,
-        fileName: document.getElementById('bookFileName').value,
-        stock: parseInt(document.getElementById('bookStock').value),
-        category: 'Fiksi & Novel', callNumber: '000', isbn: '000'
-      };
-      db.books.push(newBook); saveDB(); closeModal('bookModal'); renderBibliography(); renderOPAC();
+      let buku = document.getElementById('pilihBuku').value;
+      let nama = document.getElementById('namaPeminjam').value;
+      document.getElementById('statusPinjam').innerText = `✅ Berhasil! "${buku}" dipinjam oleh ${nama}.`;
+      document.getElementById('namaPeminjam').value = "";
     }
-    function renderBibliography() {
-      document.getElementById('bibliographyTableBody').innerHTML = db.books.map(b => `
-        <tr><td class="py-2">${b.title}</td><td>${b.fileName}</td><td>${b.stock}</td><td><a href="ebook/${b.fileName}" target="_blank" class="text-indigo-600 underline">Buka</a></td></tr>
-      `).join('');
-    }
-
-    // MEMBERS & CIRCULATION (Simplified)
-    function openMemberModal() { document.getElementById('memberModal').classList.remove('hidden'); }
-    function handleMemberSubmit(e) {
-      e.preventDefault();
-      db.members.push({ id: 'MBR-' + Date.now(), code: document.getElementById('memberCode').value, name: document.getElementById('memberName').value, status: 'Aktif' });
-      saveDB(); closeModal('memberModal'); renderMembers();
-    }
-    function renderMembers() {
-      document.getElementById('membersTableBody').innerHTML = db.members.map(m => `<tr><td class="py-2">${m.code}</td><td>${m.name}</td><td>${m.status}</td></tr>`).join('');
-    }
-    function renderCirculation() {
-      document.getElementById('loanMemberId').innerHTML = db.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-      document.getElementById('loanBookId').innerHTML = db.books.map(b => `<option value="${b.id}">${b.title}</option>`).join('');
-      document.getElementById('circulationList').innerHTML = db.loans.map(l => {
-        const b = db.books.find(x=>x.id===l.bookId);
-        return `<div class="p-2 border rounded">${b?b.title:'-'} - ${l.status}</div>`;
-      }).join('');
-    }
-    function handleBorrowSubmit(e) {
-      e.preventDefault();
-      db.loans.push({ id: 'TRX-'+Date.now(), memberId: document.getElementById('loanMemberId').value, bookId: document.getElementById('loanBookId').value, status: 'Dipinjam' });
-      saveDB(); renderCirculation();
-    }
-
-    function renderAll() { renderOPAC(); renderDashboard(); renderBibliography(); renderMembers(); renderCirculation(); }
-    
-    // START
-    renderAuthUI();
-    renderAll();
-    switchTab('opac');
   </script>
 </body>
 </html>
