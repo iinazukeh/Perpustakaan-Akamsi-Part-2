@@ -68,17 +68,17 @@
 
     <!-- Navigation Tabs -->
     <div class="bg-slate-50/80 border-t border-slate-200/80">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 overflow-x-auto py-1.5">
+      <div id="navTabs" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 overflow-x-auto py-1.5">
         <button data-tab="opac" onclick="switchTab('opac')" class="tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer bg-indigo-600 text-white">
           🔍 OPAC Pencarian
         </button>
         
-        <!-- Menu Khusus Pemustaka -->
+        <!-- Menu Khusus Pemustaka (Disembunyikan Default) -->
         <button id="menu-pemustaka" data-tab="pemustaka" onclick="switchTab('pemustaka')" class="hidden tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70">
           🎒 Pinjaman Saya
         </button>
 
-        <!-- Menu Khusus Pustakawan -->
+        <!-- Menu Khusus Pustakawan (Disembunyikan Default) -->
         <button id="menu-dashboard" data-tab="dashboard" onclick="switchTab('dashboard')" class="hidden tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70">
           📊 Ringkasan
         </button>
@@ -560,7 +560,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'librasys_role_db_v2';
+    const STORAGE_KEY = 'librasys_role_db_v3';
     const FINE_PER_DAY = 1000;
 
     function getTodayISO(offsetDays = 0) {
@@ -655,11 +655,9 @@
       const icon = document.getElementById(iconId);
       if (input.type === 'password') {
         input.type = 'text';
-        // Ganti ikon jadi mata dicoret (hidden)
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />`;
       } else {
         input.type = 'password';
-        // Ganti ikon jadi mata terbuka
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
       }
     }
@@ -674,7 +672,6 @@
     }
 
     function openRegisterModal() {
-      // Generate ID otomatis
       document.getElementById('regMemberCode').value = `AGT-2026-${String(db.members.length + 1).padStart(3, '0')}`;
       document.getElementById('registerModal').classList.remove('hidden');
     }
@@ -747,7 +744,7 @@
       closeModal('registerModal');
       showToast('Registrasi berhasil! Silakan login.');
       e.target.reset();
-      renderMembers(); // Update tabel di admin
+      renderMembers();
     }
 
     function logoutUser() {
@@ -768,10 +765,21 @@
       const notLogged = document.getElementById('notLoggedIn');
       const loggedControls = document.getElementById('loggedInControls');
       const roleBanner = document.getElementById('roleBanner');
+      
+      const navTabs = document.getElementById('navTabs');
 
+      // Sembunyikan SEMUA menu rahasia terlebih dahulu
       ['pemustaka', 'dashboard', 'bibliography', 'members', 'circulation', 'reset'].forEach(id => {
         const el = document.getElementById('menu-' + id);
         if(el) el.classList.add('hidden');
+      });
+
+      // Reset tombol tab pertama agar tetap aktif saat logout
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isActive = btn.dataset.tab === 'opac';
+        btn.className = isActive
+          ? 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer bg-indigo-600 text-white'
+          : 'tab-btn px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer text-slate-600 hover:bg-slate-200/70';
       });
 
       if (db.currentUser) {
