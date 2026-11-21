@@ -48,13 +48,13 @@
           <span id="authStatusText">Mode Pengunjung</span>
         </div>
 
-        <!-- Tombol Login -->
+        <!-- Tombol Login / Daftar -->
         <div id="notLoggedIn" class="flex items-center gap-2">
-          <button onclick="openLoginModal('pemustaka')" class="hidden sm:block px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 text-sm font-medium transition cursor-pointer">
-            Login Pemustaka
+          <button onclick="openRegisterModal()" class="hidden sm:block px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 text-sm font-medium transition cursor-pointer">
+            Daftar Pemustaka
           </button>
-          <button onclick="openLoginModal('pustakawan')" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition shadow-sm cursor-pointer">
-            Login Pustakawan
+          <button onclick="openLoginModal('pemustaka')" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition shadow-sm cursor-pointer">
+            Login
           </button>
         </div>
 
@@ -109,7 +109,7 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 1: OPAC (Semua Bisa Akses) ==================== -->
+    <!-- ==================== TAB 1: OPAC ==================== -->
     <section id="section-opac" class="tab-section space-y-6">
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <div class="mb-5">
@@ -153,17 +153,16 @@
       <div id="opacResults" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
     </section>
 
-    <!-- ==================== TAB 2: PEMUSTAKA (Pinjaman Saya) ==================== -->
+    <!-- ==================== TAB 2: PEMUSTAKA ==================== -->
     <section id="section-pemustaka" class="tab-section hidden space-y-6">
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <h2 class="text-xl font-bold text-slate-900 mb-1">Pinjaman Saya</h2>
         <p class="text-sm text-slate-500 mb-5">Daftar buku yang sedang dan pernah Anda pinjam.</p>
-        
         <div id="pemustakaLoansList" class="space-y-3"></div>
       </div>
     </section>
 
-    <!-- ==================== TAB 3: DASHBOARD (Pustakawan) ==================== -->
+    <!-- ==================== TAB 3: DASHBOARD ==================== -->
     <section id="section-dashboard" class="tab-section hidden space-y-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
@@ -207,7 +206,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 4: BIBLIOGRAFI (Pustakawan) ==================== -->
+    <!-- ==================== TAB 4: BIBLIOGRAFI ==================== -->
     <section id="section-bibliography" class="tab-section hidden space-y-6">
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
@@ -241,7 +240,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 5: KEANGGOTAAN (Pustakawan) ==================== -->
+    <!-- ==================== TAB 5: KEANGGOTAAN ==================== -->
     <section id="section-members" class="tab-section hidden space-y-6">
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
@@ -272,7 +271,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 6: SIRKULASI (Pustakawan) ==================== -->
+    <!-- ==================== TAB 6: SIRKULASI ==================== -->
     <section id="section-circulation" class="tab-section hidden space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
@@ -325,7 +324,7 @@
     LibraSys — Aplikasi Otomasi Perpustakaan
   </footer>
 
-  <!-- ==================== MODAL LOGIN (DENGAN PILIHAN ROLE) ==================== -->
+  <!-- ==================== MODAL LOGIN ==================== -->
   <div id="loginModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
       <div class="flex items-center justify-between mb-4">
@@ -352,7 +351,12 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
-          <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" />
+          <div class="relative">
+            <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none pr-10" />
+            <button type="button" onclick="togglePassword('loginPassword', 'eyeIconLogin')" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 cursor-pointer">
+              <svg id="eyeIconLogin" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            </button>
+          </div>
         </div>
         <div id="loginHint" class="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
           Akun bawaan: <span class="font-semibold">admin</span> / <span class="font-semibold">admin123</span>
@@ -360,6 +364,57 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('loginModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">Batal</button>
           <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium cursor-pointer">Masuk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL REGISTRASI ==================== -->
+  <div id="registerModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-slate-900">Registrasi Akun Pemustaka</h3>
+        <button onclick="closeModal('registerModal')" class="text-slate-400 hover:text-slate-600 text-xl leading-none cursor-pointer">&times;</button>
+      </div>
+      <form onsubmit="handleRegisterSubmit(event)" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ID Anggota (Otomatis)</label>
+            <input id="regMemberCode" type="text" readonly class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-sm outline-none font-mono text-slate-500 cursor-not-allowed" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Lengkap</label>
+            <input id="regName" type="text" required placeholder="Budi Santoso" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Username (Untuk Login)</label>
+            <input id="regUsername" type="text" required placeholder="budi123" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
+            <div class="relative">
+              <input id="regPassword" type="password" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500 pr-10" />
+              <button type="button" onclick="togglePassword('regPassword', 'eyeIconReg')" class="absolute right-3 top-2 text-slate-400 hover:text-slate-700 cursor-pointer">
+                <svg id="eyeIconReg" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Program Studi / Unit</label>
+            <input id="regDept" type="text" required placeholder="Ilmu Komputer" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email / No. HP</label>
+            <input id="regContact" type="text" required placeholder="budi@email.com" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('registerModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium cursor-pointer">Daftar Sekarang</button>
         </div>
       </form>
     </div>
@@ -467,7 +522,9 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
-            <input id="memberPassword" type="text" required placeholder="password123" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            <div class="relative">
+              <input id="memberPassword" type="text" required placeholder="password123" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -503,7 +560,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'librasys_role_db_v1';
+    const STORAGE_KEY = 'librasys_role_db_v2';
     const FINE_PER_DAY = 1000;
 
     function getTodayISO(offsetDays = 0) {
@@ -515,9 +572,8 @@
     function createInitialDB() {
       return {
         currentUser: null,
-        currentRole: null, // 'pustakawan' atau 'pemustaka'
+        currentRole: null,
         activeTab: 'opac',
-        // Akun Login Pustakawan
         users: [{ username: 'admin', passwordHash: btoa('admin123'), role: 'pustakawan' }],
         books: [
           { id: 'BK-101', title: 'Ada Cinta di SMA CJR', author: 'CJR', publisher: 'Ebook Digital', year: 2024, isbn: '978-111', callNumber: '813 CJR a', category: 'Fiksi & Novel', fileName: 'Ada_Cinta_di_SMA_CJR.pdf', stock: 3, summary: 'Novel remaja bertema cinta dan persahabatan di bangku SMA.', color: 'from-pink-500 to-rose-500' },
@@ -527,7 +583,6 @@
           { id: 'BK-105', title: 'Bumi Tere Liye', author: 'Tere Liye', publisher: 'Ebook Digital', year: 2024, isbn: '978-555', callNumber: '813 TER b', category: 'Fiksi & Novel', fileName: 'Bumi_Tere_liye.pdf', stock: 3, summary: 'Petualangan dunia paralel karya Tere Liye.', color: 'from-indigo-400 to-purple-500' },
           { id: 'BK-106', title: 'Dilan', author: 'Pidi Baiq', publisher: 'Ebook Digital', year: 2024, isbn: '978-666', callNumber: '813 PID d', category: 'Fiksi & Novel', fileName: 'Dilan.pdf', stock: 4, summary: 'Kisah cinta Dilan dan Milea di Bandung tahun 1990-an.', color: 'from-cyan-400 to-blue-500' }
         ],
-        // Anggota sekaligus Akun Pemustaka
         members: [
           { id: 'MBR-1', code: 'AGT-2026-001', name: 'Nadia Pramesti', username: 'nadia', passwordHash: btoa('siswa123'), dept: 'Ilmu Perpustakaan', contact: 'nadia.p@mail.id', status: 'Aktif' },
           { id: 'MBR-2', code: 'AGT-2026-002', name: 'Dimas Aditya', username: 'dimas', passwordHash: btoa('siswa123'), dept: 'Sastra Indonesia', contact: '0812-3456-7890', status: 'Aktif' }
@@ -594,6 +649,21 @@
       return diff > 0 ? diff : 0;
     }
 
+    // ==================== TOGGLE PASSWORD ====================
+    function togglePassword(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        // Ganti ikon jadi mata dicoret (hidden)
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />`;
+      } else {
+        input.type = 'password';
+        // Ganti ikon jadi mata terbuka
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+      }
+    }
+
     // ==================== AUTH & ROLE ====================
     function openLoginModal(role) {
       document.querySelector(`input[name="loginRole"][value="${role}"]`).checked = true;
@@ -601,6 +671,12 @@
       document.getElementById('loginUsername').value = '';
       document.getElementById('loginPassword').value = '';
       document.getElementById('loginModal').classList.remove('hidden');
+    }
+
+    function openRegisterModal() {
+      // Generate ID otomatis
+      document.getElementById('regMemberCode').value = `AGT-2026-${String(db.members.length + 1).padStart(3, '0')}`;
+      document.getElementById('registerModal').classList.remove('hidden');
     }
 
     function updateLoginForm() {
@@ -635,7 +711,7 @@
         if (!found) { showToast('Akun Pemustaka tidak ditemukan!', true); return; }
         db.currentUser = found.username;
         db.currentRole = 'pemustaka';
-        db.currentMemberId = found.id; // Simpan ID anggota untuk filter
+        db.currentMemberId = found.id;
       }
 
       saveDB();
@@ -644,6 +720,34 @@
       renderAuthUI();
       renderAll();
       switchTab('opac');
+    }
+
+    function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('regUsername').value.trim();
+      const p = document.getElementById('regPassword').value;
+      if (db.members.some(m => m.username.toLowerCase() === u.toLowerCase())) {
+        showToast('Username sudah dipakai, silakan pilih yang lain.', true);
+        return;
+      }
+      
+      const newMember = {
+        id: 'MBR-' + Date.now().toString().slice(-4),
+        code: document.getElementById('regMemberCode').value,
+        name: document.getElementById('regName').value.trim(),
+        username: u,
+        passwordHash: btoa(p),
+        dept: document.getElementById('regDept').value.trim(),
+        contact: document.getElementById('regContact').value.trim(),
+        status: 'Aktif'
+      };
+      
+      db.members.push(newMember);
+      saveDB();
+      closeModal('registerModal');
+      showToast('Registrasi berhasil! Silakan login.');
+      e.target.reset();
+      renderMembers(); // Update tabel di admin
     }
 
     function logoutUser() {
@@ -665,7 +769,6 @@
       const loggedControls = document.getElementById('loggedInControls');
       const roleBanner = document.getElementById('roleBanner');
 
-      // Sembunyikan semua menu khusus dulu
       ['pemustaka', 'dashboard', 'bibliography', 'members', 'circulation', 'reset'].forEach(id => {
         const el = document.getElementById('menu-' + id);
         if(el) el.classList.add('hidden');
@@ -681,7 +784,6 @@
           dot.className = 'w-2 h-2 rounded-full bg-indigo-500';
           roleBanner.innerHTML = `<div><span class="font-semibold">Mode Pustakawan:</span> Anda dapat mengelola buku, anggota, dan sirkulasi.</div>`;
           
-          // Tampilkan menu Pustakawan
           ['dashboard', 'bibliography', 'members', 'circulation', 'reset'].forEach(id => {
             document.getElementById('menu-' + id).classList.remove('hidden');
           });
@@ -690,7 +792,6 @@
           dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
           roleBanner.innerHTML = `<div><span class="font-semibold">Mode Pemustaka:</span> Anda dapat mencari buku dan melihat daftar pinjaman Anda.</div>`;
           
-          // Tampilkan menu Pemustaka
           document.getElementById('menu-pemustaka').classList.remove('hidden');
         }
       } else {
@@ -701,7 +802,7 @@
         loggedControls.classList.remove('flex');
         roleBanner.innerHTML = `
           <div>
-            <span class="font-semibold">Akses Publik:</span> Silakan login untuk meminjam buku atau mengelola data.
+            <span class="font-semibold">Akses Publik:</span> Silakan login atau daftar untuk meminjam buku.
           </div>
         `;
       }
@@ -709,7 +810,6 @@
 
     // ==================== NAV ====================
     function switchTab(tabName) {
-      // Cek hak akses
       if (tabName === 'pemustaka' && db.currentRole !== 'pemustaka') { showToast('Akses ditolak.', true); return; }
       if (['dashboard', 'bibliography', 'members', 'circulation'].includes(tabName) && db.currentRole !== 'pustakawan') { showToast('Akses ditolak.', true); return; }
 
@@ -799,7 +899,7 @@
       }).join('');
     }
 
-    // ==================== PEMUSTAKA (Pinjaman Saya) ====================
+    // ==================== PEMUSTAKA ====================
     function renderPemustaka() {
       const myLoans = db.loans.filter(l => l.memberId === db.currentMemberId);
       const container = document.getElementById('pemustakaLoansList');
@@ -1038,7 +1138,6 @@
       if (editId) {
         const idx = db.members.findIndex(m => m.id === editId);
         if (idx !== -1) {
-          // Jika password tidak diubah (masih ••••), jangan ganti hash-nya
           if (passInput && passInput !== '••••••••') {
             payload.passwordHash = btoa(passInput);
           }
